@@ -306,6 +306,18 @@ class Sweep:
         # Every configuration difference between the harness and the target is a
         # place a bug can live for free. This one is now checked; the general
         # lesson is in the DEVLOG.
+        # THE OTHER ONE THE HARNESS HAD NO OPINION ABOUT. ANTIC displays
+        # scanlines 8..247 and starts vertical blank at 248, so a display list
+        # may ask for at most 240 scanlines. This one asked for 248 and the
+        # picture rolled on a real 800XL -- while atari800 rendered a fixed
+        # 240-line window, clipped the overflow and produced a stable frame in
+        # every one of 130 runs. The emulator cannot show you a CRT losing lock,
+        # so the frame's LENGTH has to be asserted rather than looked at.
+        dls = self.dlist_scanlines()
+        self.chk('the display list fits in a frame',
+                 all(n <= 240 for n in dls),
+                 'scanlines per display list: %s (limit 240)' % dls)
+
         rb, hb = self.runs_with_basic()
         self.chk('runs with BASIC enabled, as a real XL boots',
                  rb > 0 and hb == 100,
@@ -437,6 +449,39 @@ class Sweep:
             if m[WKICK]:
                 kick += 1
         return flash, kick
+
+    # ANTIC scanlines per display-list instruction, by mode nibble.
+    _ANTIC_LINES = {0x2: 8, 0x3: 10, 0x4: 8, 0x5: 16, 0x6: 8, 0x7: 16, 0x8: 8,
+                    0x9: 4, 0xA: 4, 0xB: 2, 0xC: 1, 0xD: 2, 0xE: 1, 0xF: 1}
+
+    def dlist_scanlines(self):
+        """Walk both display lists out of live RAM and total their scanlines.
+
+        Out of RAM rather than out of the source, because what ANTIC executes is
+        whatever build_dlist actually wrote -- and build_dlist is a loop with an
+        LMS per row, which is exactly the kind of thing that is easy to get one
+        iteration wrong in.
+        """
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        m = s.m()
+        out = []
+        for base in (0x4000, 0x4400):
+            a, lines = base, 0
+            for _ in range(400):
+                b = m[a]
+                mode = b & 0x0F
+                if mode == 0x01:                    # jump / JVB ends the list
+                    break
+                if mode == 0x00:                    # 1-8 blank scanlines
+                    lines += ((b >> 4) & 7) + 1
+                else:
+                    lines += self._ANTIC_LINES[mode]
+                    if b & 0x40:                    # LMS: skip the address
+                        a += 2
+                a += 1
+            out.append(lines)
+        return out
 
     def runs_with_basic(self):
         """World frames rendered and health, on a machine with BASIC ROM in.

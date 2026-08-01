@@ -768,10 +768,27 @@ _dl2
         dex
         bne _dlrow
 
-        ldx #4                  ; 4 rows of ANTIC 2 text = 32 scanlines
-        lda #<HUDRAM
+        ; TWO rows of ANTIC 2 text = 16 scanlines, and the count is not a style
+        ; choice -- it is the difference between a picture that locks and one
+        ; that rolls.
+        ;
+        ; ANTIC displays scanlines 8..247 and begins vertical blank at 248, so a
+        ; display list may ask for at most 240 scanlines. This one asked for
+        ; 248: 24 blank + 96 rows shown twice (192) + FOUR text rows (32). The
+        ; last text row was still doing playfield DMA while ANTIC should have
+        ; been generating sync, and on a real 800XL the picture rolled. It never
+        ; showed up in the emulator because atari800 renders a fixed 240-line
+        ; window and does not model a CRT losing lock -- it simply clipped the
+        ; overflow and drew a stable frame.
+        ;
+        ; Two of the four rows were blank anyway: only HUDRAM+40 (health and
+        ; ammo) and HUDRAM+80 (the level name) ever carry text. Starting at +40
+        ; and drawing two costs nothing visible and brings the list to 232
+        ; scanlines, eight inside the limit rather than eight outside it.
+        ldx #2
+        lda #<[HUDRAM+40]
         sta t0
-        lda #>HUDRAM
+        lda #>[HUDRAM+40]
         sta t1
 _hudrow
         ldy #0

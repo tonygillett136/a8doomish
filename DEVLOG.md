@@ -1628,3 +1628,63 @@ correct?" but "what does every one of these readings have in common?"
 The honest note: `--machine=-nobasic` was already written down in my own
 reference notes for this toolchain, as a gotcha, in those words. I had recorded
 the difference and never asked what it implied about anything running under it.
+
+## Second hardware run: the title screen appears, and the picture still rolls
+
+The BASIC fix worked — the wordmark and the tagline both render correctly, so
+everything above `$A000` is executing from RAM now. The picture still rolled.
+
+That is a vertical sync fault, and this time the cause is arithmetic rather than
+memory. ANTIC displays scanlines 8..247 and begins vertical blank at 248, so a
+display list may ask for **at most 240 scanlines**. Walking both display lists
+out of live RAM and totalling them:
+
+    DLIST A: 248 scanlines
+    DLIST B: 248 scanlines
+
+24 blank + 96 rows shown twice (192) + **four** rows of ANTIC 2 text (32) = 248.
+The last text row was still doing playfield DMA while ANTIC should have been
+generating sync. Eight scanlines over, and a frame eight lines too long is a
+picture that will not lock.
+
+Two of those four text rows were blank. Only `HUDRAM+40` (health and ammo) and
+`HUDRAM+80` (the level name) ever carry anything — I had measured exactly that
+hours earlier, when checking the banner strings, and read it as a curiosity
+rather than as sixteen spare scanlines. Starting the text band at `+40` and
+drawing two rows costs nothing visible and brings the list to **232**: eight
+inside the limit instead of eight outside it.
+
+### Why 130 green runs could not see it
+
+**atari800 renders a fixed 240-line window.** Ask it for 248 and it clips the
+overflow and hands back a stable, correct-looking frame. It cannot show you a
+CRT losing lock, because it does not model a CRT at all — it models a
+framebuffer.
+
+So this is not the harness testing the wrong machine, as the BASIC bug was. It
+is the harness being *structurally incapable* of observing the failure, which is
+worse, because no amount of looking at its output would ever have helped. The
+frame's LENGTH is not visible in a picture of the frame. It has to be computed
+from the display list and asserted.
+
+It now is, out of live RAM rather than out of the source — because what ANTIC
+executes is whatever `build_dlist` actually wrote, and `build_dlist` is a loop
+with an LMS per row, which is precisely the sort of thing that is easy to get one
+iteration wrong in.
+
+### The pattern, now that there are two of them
+
+Both hardware bugs were in the same blind spot and neither was subtle:
+
+| | the emulator | a real 800XL |
+|---|---|---|
+| `$A000-$BFFF` | RAM by default | BASIC ROM by default |
+| a 248-line display list | clipped, drawn stable | rolls |
+
+**An emulator is a model, and every bug you ship to hardware lives in the gap
+between the model and the machine.** The useful question is not "does it pass?"
+but "what can this harness not, even in principle, tell me?" Two answers so far:
+it cannot tell me the machine's default configuration is different from its own,
+and it cannot tell me a frame is the wrong length. Both are now checked.
+
+56/56.

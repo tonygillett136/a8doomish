@@ -14,20 +14,29 @@
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
   <img src="https://img.shields.io/badge/binary-28%2C723%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-55%2F55-2e7d32">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-56%2F56-2e7d32">
 </p>
 
 ---
 
-> **Status — playable prototype, one hardware run so far.**
-> The first run on a real PAL 800XL (via a Lotharek SDIO card) rolled and
-> corrupted on load: three modules live in `$A000–$BFFF`, which is the BASIC ROM
-> on an XL, and the emulator defaults to BASIC *disabled* while the hardware
-> defaults to it *enabled*. Fixed with an INIT segment that clears PORTB bit 1
-> before those segments load; the acceptance sweep now runs the whole program
-> with BASIC enabled too. **The fixed build has not yet been back to the 800XL.**
-> Everything else here is emulator-measured, and that bug is the standing proof
-> that emulator-measured is not the same thing as true.
+> **Status — playable prototype, two hardware runs, two bugs found.**
+>
+> **Run 1** on a real PAL 800XL (via a Lotharek SDIO card): corrupted on load.
+> Three modules live in `$A000–$BFFF`, which is the BASIC ROM on an XL — and the
+> emulator defaults to BASIC *disabled* while the hardware defaults to it
+> *enabled*. Fixed with an INIT segment that clears PORTB bit 1 before those
+> segments load.
+>
+> **Run 2**: the title screen renders correctly, and the picture rolls. The
+> display list asked ANTIC for **248 scanlines** against a hard limit of 240, so
+> the last status row was still doing playfield DMA when the vertical sync should
+> have been. Two of the four status rows were blank, so dropping them costs
+> nothing visible and brings the frame to 232. **Not yet retested on hardware.**
+>
+> Neither bug was visible to the emulator, for two different reasons: it booted a
+> configuration the hardware doesn't, and it renders a fixed 240-line window so it
+> physically cannot show a CRT losing lock. Both are now asserted by the sweep.
+> That is the standing proof that emulator-measured is not the same as true.
 
 ---
 
@@ -208,7 +217,7 @@ process** — no emulator subprocess, nothing to leave running afterwards.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **55 / 55** |
+| **Acceptance sweep** | **56 / 56** |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | Endurance, one boot | **60,000 frames**, 103 deaths and retries, **0 invariant failures** |
@@ -232,7 +241,9 @@ number.
 Stated plainly, because a prototype that oversells itself is worse than one that
 doesn't.
 
-- **One hardware run so far, and it failed.** See the status note at the top.
+- **Two hardware runs, two bugs, not yet retested.** See the status note at the
+  top. Both were things the emulator cannot observe, which is the most useful
+  thing this project has learned.
 - **No keys or locked doors.** The map format supports them and two levels author
   them, so the level compiler compiles locked doors down to plain ones rather
   than ship levels whose exits cannot be reached.
@@ -257,7 +268,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 55-point acceptance sweep, in process
+python3 tools/verify.py        # 56-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```
