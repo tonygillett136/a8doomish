@@ -224,6 +224,10 @@ process** — no emulator subprocess, nothing to leave running afterwards.
 | **Acceptance sweep** | **61 / 61** |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
+| The bestiary, measured | hulk 120→60→0 over exactly two point-blank shots; gunner attacking within 150 frames; hulk 1.23× a husk's height | all sweep checks |
+| Knockback | impulse $60 vs top speed $40, the frame damage lands | set, not added — hits cannot stack into a launch |
+| A fireball on screen | 76 px over 6 rows at 3 cells | was ~200 px over 28 rows: drawn as a full-size walking husk since projectiles went in |
+| Nukage | 16 HP lost in 5 s standing in THE RED CISTERN's channel, 0 beside it | 32 hurt cells authored since the levels were written; the runtime finally reads the bit |
 | Endurance, one boot | **60,000 frames**, 103 deaths and retries, **0 invariant failures** |
 | Render rate under load | 8.6 fps, flat across 45,000 of those frames |
 | Randomised soak | 20,000 frames, 5,000 per level from a fresh boot |

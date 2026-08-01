@@ -72,18 +72,17 @@ level. The end card already reports kills; add par time.
 ## The wider menu (banked 2026-08-01, priced against the real engine)
 
 ### Cheap juice — hours each, mostly one-site changes
-- **Hit knockback + screen kick when YOU are hit** — reuse `wkick` on damage
-  taken; a velocity impulse away from the attacker. Three lines; damage FELT.
+- ~~Hit knockback + screen kick when YOU are hit~~ **DONE, v1.2.**
 - **Enemy pain flash** — brighten a husk's sprite for one render tick on hit
   (the pain state already exists in the AI; only the draw needs to know).
-- **Fireball visibility audit** — slots 6-7 are drawn via the same husk art
-  path; VERIFY what an incoming ball actually looks like and give it a real
-  sprite (a bright blob; band-4 pickup art is nearly free). Fairness issue.
+- ~~Fireball visibility audit~~ **DONE, v1.2** — they were full-size walking
+  husks; now small blobs. Dedicated ball art (not the shells box) remains a
+  nice-to-have.
 - **Secrets that count** — the map format has an A_SECRET attribute bit and
   secret doors already open on use; count first entries, report on the end
   card next to kills.
-- **Hurt floors** — the attribute format has a bit7 `hurt` flag NOBODY reads.
-  Lava in THE MAW for the cost of one attr test in move_player.
+- ~~Hurt floors~~ **DONE, v1.3** — and no level edit was needed: THE RED
+  CISTERN and THE MAW had authored 32 hurt cells all along.
 - **Title shimmer** — VBI-cycle the wordmark ramp. Demoscene points.
 
 ### Medium — a session each
