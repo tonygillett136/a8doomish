@@ -113,3 +113,14 @@ level; an eight-floor "episode" is ~2.2 KB) → cartridge build (needs a
 copy-to-RAM stub; framebuffers occupy the cart window) → the weapon-reads-as-
 held endgame (angled barrel crossing the hue seam against depth-aware wall
 luminance).
+
+## Next session, first thing
+
+**Hurt floors are teed up.** The fireball/hurt scout results (including the
+exact `.lev` syntax and rebuild chain for a MAW lava pool) are in the workflow
+journal at `~/.claude/projects/-Volumes-SSD1-code-retro-computing/`
+`72dc0c20.../subagents/workflows/wf_e497382d-5ee/journal.jsonl` — read it
+before re-deriving anything. Then: attr bit7 test in a `check_floor` on the
+render tick (~15 bytes; MAPROW tables + the $0400 attr offset do the
+addressing), pain feedback comes free via the lasthp path, and the sweep needs
+a stand-in-lava-lose-health check.
