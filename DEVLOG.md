@@ -1688,3 +1688,54 @@ it cannot tell me the machine's default configuration is different from its own,
 and it cannot tell me a frame is the wrong length. Both are now checked.
 
 56/56.
+
+## A fresh-eyes review, on a different model
+
+The project changed hands — same partnership, different Claude — and the new
+eyes were pointed at the whole tree with one standing question, learned from two
+hardware failures: *what can the harness not, even in principle, see?*
+
+**Checked and NOT a bug, which is worth recording:** the OS attract mode. This
+is a joystick-only game and only keyboard IRQs reset the attract timer, so after
+~9 minutes the OS starts colour-cycling the screen — a classic trap for exactly
+this kind of program. Forced `ATRACT` to `$FE` and ran twelve seconds: the sky
+band's pixel set is identical, because the VBI and DLIs rewrite every hardware
+colour register from clean values every frame, *after* the OS applies its
+mangling. Attract is defeated by construction. No code change — a measured
+negative is worth more than defensive code for a fault that cannot occur.
+
+**Two new hardware-trap assertions.** ANTIC's display-list program counter is
+10 bits, so a list crossing a 1K address boundary wraps mid-list. Both lists end
+~430 bytes short of their boundary — layout luck, now asserted. And the XEX's
+own bytes are now parsed to prove the BASIC-off stub is the *first* segment
+with its INIT vector before anything loads at `$A000+` — segment order is
+decided by source order and nothing else pinned it.
+
+**The pickups now stand where the designer put them.** `items.inc` carried a
+"GENERATED — do not edit" header naming no generator at all — orphaned output,
+exactly as the spawn table was — with arbitrary positions and types literally
+alternating 1,0,1,0. `genitems.py` now derives all 16 from the level files:
+stim/medkit collapse to medkits, shells/shellbox to shell pickups, two of each
+per level by farthest-point sampling from the player spawn, so deep items
+reward exploring. The full playthrough still completes (19 shots, 0 deaths).
+
+**Three self-referencing test constants, one of which could never fail.** The
+review's best finds were in the test file, not the game:
+
+1. `item_pixels` computed its "vanish" number as `diff('taken','taken')` — a
+   frame compared against ITSELF, structurally zero. The check "collected
+   pickups vanish" had never been capable of failing. This project has a whole
+   memory document about self-fulfilling checks. It was in this file anyway.
+2. The same helper hard-coded "the shells at (8,6)" — a coordinate copied from
+   the table under test.
+3. `medkit pickup` teleported to (12,11), another baked coordinate — and this
+   one FAILED loudly the moment the table was regenerated, which is the correct
+   behaviour of a wrong test and how it was caught.
+
+The vanish check now measures a real property: collect the item through the
+game's own path — stand on it, let `check_items` fire — and the resulting
+picture must be identical to the renderer's no-item path. 90 pixels drawn, 0
+after collection, bitmask verified. Both position-dependent checks now read the
+live tables.
+
+58/58.

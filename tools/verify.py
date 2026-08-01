@@ -37,6 +37,7 @@ WONDONE = 0x7A07
 WONALL  = 0x7A13
 INTITLE = 0x7A14
 ITMGOT  = 0x7A12
+ITMX, ITMY, ITMT = 0x2B40, 0x2B50, 0x2B60   # pickup tables (genitems.py)
 LEVELNO = 0x7A09
 AC_FRAME_OFF = 0x7828
 AC_ANIM_OFF  = 0x7860
@@ -123,8 +124,15 @@ class Sweep:
         self.go(60)
         self.chk('point-blank one-shot', self.m()[AC_HP] == 0)
 
+        # Walk onto a medkit read from the LIVE table -- the old version
+        # teleported to (12,11), a coordinate copied out of the item table as
+        # it stood the day the check was written. Regenerating the table would
+        # have failed the check with the game working perfectly (and did).
+        m = self.m()
+        mi = next(i for i in range(4) if m[ITMT + i] == 0)
         p[HEALTH] = 40
-        p[PX_HI], p[PX_LO], p[PY_HI], p[PY_LO] = 12, 0x80, 11, 0x80
+        p[PX_HI], p[PX_LO] = m[ITMX + mi], 0x80
+        p[PY_HI], p[PY_LO] = m[ITMY + mi], 0x80
         self.go(20)
         self.chk('medkit pickup', self.m()[HEALTH] == 65)
 
@@ -176,9 +184,10 @@ class Sweep:
         # Pickups must be VISIBLE, and must vanish when collected. They used
         # to be neither: four per level, picked up by standing on the exact
         # cell, with nothing on screen to say they were ever there.
-        drawn, gone = self.item_pixels()
+        drawn, gone, got = self.item_pixels()
         self.chk('pickups are visible', drawn > 40, '%d px' % drawn)
-        self.chk('collected pickups vanish', gone == 0, '%d px' % gone)
+        self.chk('collected pickups vanish', got and gone == 0,
+                 '%d px left after walking over it' % gone)
 
         # Material signatures. The two that MUST be exact are secret and
         # sealed: they are walls the player is not meant to be able to spot,
@@ -315,8 +324,24 @@ class Sweep:
         # so the frame's LENGTH has to be asserted rather than looked at.
         dls = self.dlist_scanlines()
         self.chk('the display list fits in a frame',
-                 all(n <= 240 for n in dls),
-                 'scanlines per display list: %s (limit 240)' % dls)
+                 all(n <= 240 for n, _ in dls),
+                 'scanlines per display list: %s (limit 240)' % [n for n, _ in dls])
+        # ANTIC's display-list program counter is 10 bits wide: a list that
+        # crosses a 1K address boundary wraps back to the start of the page
+        # mid-list. Both lists currently END around $x24D -- ~430 bytes short
+        # of their boundary -- which is layout luck, not a guarantee, and two
+        # more text rows would not be the first time this file grew.
+        self.chk('the display list stays inside its 1K page',
+                 not any(x for _, x in dls),
+                 'crossings: %s' % [x for _, x in dls])
+
+        # The loader contract: the very FIRST thing in the file must be the
+        # eight-byte stub that banks the BASIC ROM out, and the INIT vector
+        # that runs it must come before anything loads at $A000+. Asserted
+        # against the file's actual bytes, because segment order is decided by
+        # source order in main.asm and nothing else pins it.
+        self.chk('the XEX leads with the BASIC-off stub', self.xex_stub_first(),
+                 '')
 
         rb, hb = self.runs_with_basic()
         self.chk('runs with BASIC enabled, as a real XL boots',
@@ -455,7 +480,7 @@ class Sweep:
                     0x9: 4, 0xA: 4, 0xB: 2, 0xC: 1, 0xD: 2, 0xE: 1, 0xF: 1}
 
     def dlist_scanlines(self):
-        """Walk both display lists out of live RAM and total their scanlines.
+        """Walk both display lists out of live RAM: (scanlines, crossed-1K).
 
         Out of RAM rather than out of the source, because what ANTIC executes is
         whatever build_dlist actually wrote -- and build_dlist is a loop with an
@@ -472,6 +497,7 @@ class Sweep:
                 b = m[a]
                 mode = b & 0x0F
                 if mode == 0x01:                    # jump / JVB ends the list
+                    a += 2
                     break
                 if mode == 0x00:                    # 1-8 blank scanlines
                     lines += ((b >> 4) & 7) + 1
@@ -480,8 +506,26 @@ class Sweep:
                     if b & 0x40:                    # LMS: skip the address
                         a += 2
                 a += 1
-            out.append(lines)
+            out.append((lines, (base >> 10) != (a >> 10)))
         return out
+
+    def xex_stub_first(self):
+        """True if the file's first segment is the $0600 BASIC-off stub with an
+        INIT vector immediately after it."""
+        b = open(self.xex, 'rb').read()
+        if b[:2] != b'\xff\xff':
+            return False
+        start = b[2] | (b[3] << 8)
+        end = b[4] | (b[5] << 8)
+        if start != 0x0600:
+            return False
+        seg = b[6:6 + end - start + 1]
+        nxt = b[6 + len(seg):6 + len(seg) + 6]
+        # lda $D301 / ora #$02 / sta $D301 somewhere in the stub, then an
+        # INIT-vector segment ($02E2-$02E3) pointing back into it
+        return (b'\xad\x01\xd3\x09\x02\x8d\x01\xd3' in seg
+                and nxt[:4] == b'\xe2\x02\xe3\x02'
+                and start <= (nxt[4] | (nxt[5] << 8)) <= end)
 
     def runs_with_basic(self):
         """World frames rendered and health, on a machine with BASIC ROM in.
@@ -1033,30 +1077,73 @@ class Sweep:
                     return ('actor %d escaped the map' % i, m[AC_XHI + i], m[AC_YHI + i])
         return None
 
+    def _item_viewpoint(self, m):
+        """A spot 3 open cells from a level-1 pickup, facing it.
+
+        Read from the live tables rather than hard-coded: the previous version
+        baked "the shells at (8,6)" into the test, so regenerating the item
+        table would have broken the check -- a test constant that was really a
+        copy of the data under test. All four items are tried, because which of
+        them happens to sit at the end of a straight corridor is a property of
+        the current level design, not of the renderer under test.
+        """
+        for i, mask in ((0, 1), (1, 2), (2, 4), (3, 8)):
+            ix, iy = m[ITMX + i], m[ITMY + i]
+            for dx, dy, ang in ((-1, 0, 0), (1, 0, 128), (0, -1, 64), (0, 1, 192)):
+                if all(m[MAPBASE + (ix + dx * k) + (iy + dy * k) * 32] in (0, 8, 12)
+                       for k in (1, 2, 3)):
+                    return ix + dx * 3, iy + dy * 3, ang, ix, iy, mask
+        return None
+
     def item_pixels(self):
-        """Pixels a level-1 pickup puts on screen, and how many survive once
-        it is marked collected."""
+        """Pixels a pickup puts on screen; pixels that survive REAL collection.
+
+        The old version of the second number was diff('taken','taken') -- a
+        frame compared against itself, structurally zero, a check that could
+        not fail. (The project has a whole document about tests like that. It
+        was in this file anyway.) The property now measured: collect the item
+        through the game's own path -- stand on it, let check_items fire --
+        and the picture must become identical to the renderer's no-item path.
+        That catches a wrong bitmask, a wrong table index, or a stale sprite
+        left in either framebuffer.
+        """
         import metrics as M
-        frames = {}
-        for state in ('present', 'taken', 'absent'):
+
+        def boot():
             s = Sweep(self.xex)
             s.a.frame(80)
             s.pull_trigger()
             s.a.frame(200)
             for k in range(6):
-                s.p[AC_LIVE + k] = 0              # no actors in the shot
-            s.p[PX_HI], s.p[PX_LO] = 5, 0x80      # open cell, facing the
-            s.p[PY_HI], s.p[PY_LO] = 6, 0x80      # shells at (8,6)
-            s.p[PANG] = 0
-            if state != 'present':
-                s.p[ITMGOT] = 0xFF
-            if state == 'absent':
-                s.p[MAPBASE + 8 + 6 * 32] = 1     # wall it off as the control
-            s.go(25)
-            frames[state] = M.luma(M.grab(s.a))
+                s.p[AC_LIVE + k] = 0              # the item is the subject
+            return s
+
+        s = boot()
+        vp = self._item_viewpoint(s.m())
+        if vp is None:
+            return 0, 99, False
+        px, py, ang, ix, iy, mask = vp
+
+        def look(s):
+            s.p[PX_HI], s.p[PX_LO] = px, 0x80
+            s.p[PY_HI], s.p[PY_LO] = py, 0x80
+            s.p[PANG] = ang
+            s.go(20)                              # repaint BOTH buffers
+            return M.luma(M.grab(s.a))
+
+        present = look(s)
+        s.p[PX_HI], s.p[PY_HI] = ix, iy           # stand on it: the real path
+        s.go(15)
+        collected = bool(s.m()[ITMGOT] & mask)
+        after = look(s)
+
+        s2 = boot()                               # control: never drawn at all
+        s2.p[ITMGOT] = 0xFF
+        taken = look(s2)
+
         diff = lambda a, b: sum(1 for r in range(96) for c in range(80)
-                                if frames[a][r][c] != frames[b][r][c])
-        return diff('present', 'taken'), 0 if diff('taken', 'taken') == 0 else 1
+                                if a[r][c] != b[r][c])
+        return diff(present, taken), diff(after, taken), collected
 
     def material_luma(self, mats):
         """Mean rendered luminance of a flat facing wall of each material.

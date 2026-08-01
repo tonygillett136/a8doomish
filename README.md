@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
   <img src="https://img.shields.io/badge/binary-28%2C723%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-56%2F56-2e7d32">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-58%2F58-2e7d32">
 </p>
 
 ---
@@ -217,7 +217,7 @@ process** — no emulator subprocess, nothing to leave running afterwards.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **56 / 56** |
+| **Acceptance sweep** | **58 / 58** |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | Endurance, one boot | **60,000 frames**, 103 deaths and retries, **0 invariant failures** |
@@ -248,8 +248,10 @@ doesn't.
   them, so the level compiler compiles locked doors down to plain ones rather
   than ship levels whose exits cannot be reached.
 - **The authored content layer is only half used.** The levels specify 39 actors
-  across 5 types and 42 items across 11. The game takes the actors' *positions* —
-  18 of 20 spawns — and ignores their types, shipping 20 identical husks.
+  across 5 types and 42 items across 11. The game takes the actors'
+  *positions* — 18 of 20 spawns — and now all 16 pickup positions too, but
+  ignores the types: 5 authored enemy types ship as identical husks, 11 authored
+  item types collapse to medkits and shells.
 - **Triggers are not loaded**, so sealed monster closets never open. SILENT
   COLONNADE authors thirteen actors and only five are reachable.
 - **Audio has never been heard.** It is verified as POKEY register traces only.
@@ -268,7 +270,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 56-point acceptance sweep, in process
+python3 tools/verify.py        # 58-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```
