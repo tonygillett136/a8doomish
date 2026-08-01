@@ -322,6 +322,12 @@ DEVLOG.md       the whole story, wrong turns included
 
 ---
 
+## The lessons
+
+[**`LESSONS.md`**](LESSONS.md) — the way of working that produced this, written
+as thirteen transferable principles, each with the failure that earned it. None
+of them are about the 6502.
+
 ## The DEVLOG
 
 [**`DEVLOG.md`**](DEVLOG.md) is 1,600 lines and is the part worth reading. It
