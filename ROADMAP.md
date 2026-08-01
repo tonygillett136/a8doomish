@@ -68,3 +68,48 @@ level. The end card already reports kills; add par time.
   the checks proved spawning, not fighting.
 - **Nothing ships without the full sweep green, and hardware retests after
   display/memory-map changes.**
+
+## The wider menu (banked 2026-08-01, priced against the real engine)
+
+### Cheap juice — hours each, mostly one-site changes
+- **Hit knockback + screen kick when YOU are hit** — reuse `wkick` on damage
+  taken; a velocity impulse away from the attacker. Three lines; damage FELT.
+- **Enemy pain flash** — brighten a husk's sprite for one render tick on hit
+  (the pain state already exists in the AI; only the draw needs to know).
+- **Fireball visibility audit** — slots 6-7 are drawn via the same husk art
+  path; VERIFY what an incoming ball actually looks like and give it a real
+  sprite (a bright blob; band-4 pickup art is nearly free). Fairness issue.
+- **Secrets that count** — the map format has an A_SECRET attribute bit and
+  secret doors already open on use; count first entries, report on the end
+  card next to kills.
+- **Hurt floors** — the attribute format has a bit7 `hurt` flag NOBODY reads.
+  Lava in THE MAW for the cost of one attr test in move_player.
+- **Title shimmer** — VBI-cycle the wordmark ramp. Demoscene points.
+
+### Medium — a session each
+- **Strafing** — the DOOM feel gap. One joystick button, so it needs a
+  modifier design: OPTION/SELECT console keys as strafe-hold is period-correct
+  and free of the fire button.
+- **Doors that open visibly** — animate the luminance over ~4 ticks.
+- **Per-type attack sounds** — the audio engine has priority slots spare;
+  a hulk should ROAR.
+- **Floor intermission card** — "FLOOR CLEARED · KILLS 4/5 · 0:47" between
+  levels; the banner row exists, par times are a table.
+- **NTSC verification** — the 232-line display list already fits NTSC's 240;
+  timings run ~17% faster (telegraph 0.40s→0.33s). One sweep run under
+  `-ntsc` + a README note opens the US hardware audience.
+- **Web: Gamepad API + touch polish** in player.js (~20 lines).
+- **Web: a GLOBAL leaderboard** — the site already peeks kills/health out of
+  emulated RAM at victory; a tiny Cloudflare Worker + KV turns that into a
+  worldwide high-score table around an unmodified 1983 binary. This is the
+  single most "exponential" cheap thing on the list.
+- **CI** — GitHub Action building mads + libatari800 from source (cached) and
+  running the 61-check sweep on every push.
+
+### Big rocks — the ones already in M2-M5 above
+Triggers/closets → keys → barrels → the Maw's real boss behaviour → music +
+attract mode → four MORE floors (authoring is cheap: ~550 packed bytes per
+level; an eight-floor "episode" is ~2.2 KB) → cartridge build (needs a
+copy-to-RAM stub; framebuffers occupy the cart window) → the weapon-reads-as-
+held endgame (angled barrel crossing the hue seam against depth-aware wall
+luminance).
