@@ -1,0 +1,101 @@
+
+name: THE VESTIBULE
+level: 1
+spawn: 4,6 east
+par: 90
+default_light: 2
+
+legend:
+
+  Q wall secret
+  _ open secret
+  A open secret thing armour
+  z open secret thing shellbox
+end
+
+map:
+#################***############
+#################...############
+#################.g.############
+############.m............######
+##.....#####..............######
+##.t...#.###...=..=..=..=.######
+##..@.....................######
+##.....###.#..............######
+##.=...#####...=..=..=..=.######
+############..............######
+############...........h..######
+############...=..=..=..=.######
+############.s............######
+############..............######
+########################D#######
+########################.#######
+########################.#######
+#######################M.#######
+########################.#######
+##############.............#####
+##############..=..=..=..=.#####
+##############.............#####
+##############..h.......h..#####
+##############..=..=..=..=.#####
+##############.....XXX.....#####
+###################***###Q######
+#######################_____####
+#######################_A_z_####
+#######################_____####
+################################
+################################
+################################
+end
+
+light:
+
+  rect 2 4 5 5 5        ; start chamber -- lit, safe, nothing can reach you
+  rect 7 6 5 1 1        ; ...into the dark. the rhythm starts here
+  rect 8 5 1 1 3
+  rect 10 7 1 1 3
+  rect 12 3 14 11 5     ; HALL A opens up and brightens
+  rect 17 1 3 2 7       ; the glow alcove: brightest thing on the level
+  cell 18 1 7
+  cell 24 14 3
+  rect 23 15 2 4 1      ; dark again
+  rect 14 19 13 6 6     ; EXIT HALL -- brightest room
+  rect 19 24 3 1 7
+  rect 23 26 5 3 4      ; secret vault
+end
+
+notes:
+
+THE VESTIBULE -- teach the verbs, then let the player use them.
+
+  1 SPAWN (4,6) facing east in a small lit chamber with one column in it, so
+    the very first frame already shows a near face, a far face and a floor.
+    The only opening is a bright slot in the east wall. Teaches: forward.
+  2 THE CORRIDOR (x7-11 y6, light 1). One cell wide and dark, with two 1-deep
+    alcoves at (8,5) and (10,7) that break the wall silhouette as you pass --
+    the cheapest possible way to make walking read as motion.
+  3 HALL A (x12-25 y3-13, light 5). The corridor dumps you out at (12,6),
+    which is deliberately BETWEEN the column rows at y5 and y8 rather than
+    on a clear axis: the first frame in the hall is two rows of columns
+    opening diagonally away from you, which is the most three-dimensional
+    image this engine can draw. Twelve columns on a 3-cell pitch turn a
+    14x11 room into something with depth from every standing position.
+  4 THE GLOW ALCOVE (x17-19 y2) holds the SHOTGUN, lit at 7 against a level
+    that averages 2. It is the brightest thing you have seen and it is off
+    the main aisle: reward visible from the entrance, one detour to take it.
+    Landmark #1.
+  5 FIRST HUSK at (23,10), the far corner, ~11 cells away and behind columns.
+    It has to walk an aisle to reach you, so you see it coming and the whole
+    hall plus the corridor is behind you to back into. Safe-ish first kill.
+  6 The columns are the teaching tool: with no strafe, a 1x1 pillar is the
+    only cover the game has, and the 2-cell aisles make circling one work.
+  7 DOOR (24,14), south-east, reached down the x24 aisle -- the aisle points
+    at it, so the route is signposted by the architecture, not a map.
+  8 DESCENT (x24 y15-18, light 1) with a medkit in a recess at (23,17).
+    Tight and dark after the open hall: the rhythm again.
+  9 EXIT HALL (x14-26 y19-24, light 6) -- brightest room on the level, eight
+    columns, two husks. You enter at (24,19) beside a column, so the reveal
+    is a diagonal through the colonnade rather than a flat wall. The exit
+    switch (glow, x19-21 y25) is visible from the doorway.
+ 10 SECRET: the wall at (25,25) is a fake. Armour and a shell box behind it.
+end

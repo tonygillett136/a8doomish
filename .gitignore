@@ -1,0 +1,34 @@
+# Build outputs — abyss.xex IS committed (it is the thing you run), but the
+# 300 KB listing and the label file are regenerated on every build.
+abyss.lst
+abyss.lab
+
+# Source snapshots taken by snap.sh after each verified-good build. 22 MB of
+# working history that the git log now does properly.
+.snapshots/
+
+# lev/ is a byte-identical stale copy of levels/. levels/ is the live one.
+lev/
+
+# Third-party binaries. Neither is ours to redistribute; see the README for
+# where to get them.
+tools/mads
+tools/libatari800.dylib
+tools/libatari800.so
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# Working artefacts from the critic rounds — 61 screenshots of earlier, worse
+# builds, referenced by nothing. gallery/ holds the current set; the DEVLOG
+# tells the story.
+review/
+review2/
+review3/
+review4/
+review5/
+review6/
+
+# Editor/assembler leftovers
+*.bak

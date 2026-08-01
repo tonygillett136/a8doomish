@@ -1,0 +1,110 @@
+
+name: THE MAW
+level: 4
+spawn: 16,2 south
+par: 240
+default_light: 2
+
+legend:
+
+  T trig ambush group=1
+  S wall sealed group=1
+  2 thing gunner asleep group=1
+  3 thing hulk asleep group=1
+end
+
+map:
+################################
+################################
+##############..@..#############
+##############^...^#############
+##############^:m:^#############
+###......#####^...^#############
+###....u.#####^t.t^#############
+###..=.=.##.##^:.:^#####...u.###
+##*.y.........^...^#####.A...###
+###...H..#####^...^#####..=..###
+###..=.=.#####^:.:^##.##.....###
+###z.....#####^.s.^........a.###
+##############.*.*.#####..=..###
+###############*Y*######.z...###
+################.###############
+#########..................#####
+#########....s.TTT...s.....#####
+#########..:..:..:..:..:..:#####
+#########...p...........p..#####
+######2.#.......t..........#.2##
+######..S..:..:..:..:..:..:S..##
+######.3S........**........S3.##
+######..#.M......**......M.#..##
+#########..:..:..:.t:..:..:#####
+#########......o....o......#####
+#########........W.........#####
+#########..:..:.....:..:..:#####
+#########...h...........h..#####
+#########.......XX.........#####
+################**##############
+################################
+################################
+end
+
+light:
+
+  rect 14 2 5 11 4      ; the causeway
+  rect 14 3 1 9 6       ; glowing gutters either side
+  rect 18 3 1 9 6
+  cell 15 13 7
+  cell 16 13 6
+  cell 17 13 7          ; the great door, lit like an altar
+  rect 9 8 5 1 2        ; west branch, dim
+  rect 3 5 6 7 4        ; key chamber
+  rect 19 11 5 1 2
+  rect 24 7 5 7 4       ; armoury
+  cell 16 14 3
+  rect 9 15 18 14 6     ; THE MAW: the biggest lit space in the game
+  rect 16 20 4 4 7      ; the altar
+  rect 6 19 2 4 0
+  rect 28 19 2 4 0
+end
+
+notes:
+
+THE MAW -- one long approach, one gate, one room that is the whole point.
+
+  1 SPAWN (16,2) facing SOUTH at the head of a causeway. This is the only
+    level that opens on a long sightline instead of a wall: five cells wide,
+    eleven long, glowing nukage gutters down both flanks and paired metal
+    columns ON the path at y4, y7 and y10, so the walk is a slalom through a
+    receding colonnade rather than a march down a tube -- and at one cell's
+    range those columns are the brightest faces on the approach. At the far
+    end, two torch-bright cells
+    frame a yellow door. The entire level is legible from the spawn cell.
+  2 THE CAUSEWAY (light 4). The safe path is the middle three cells and the
+    columns pinch it to one cell three times; the gutters hurt. Nothing stops you walking the whole way down and trying the
+    door and being refused. The refusal is the level's first real beat.
+  3 Both side branches are entered by stepping INTO nukage: west at (14,8),
+    east at (18,11). You cannot explore without paying.
+  4 WEST -> THE KEY CHAMBER (x3-8 y5-11, light 4). A glow cell at (2,8) burns
+    behind the YELLOW KEY at (4,8), so the key reads from the corridor mouth
+    ten cells away. A hulk at (6,9) stands between, in a room with four
+    columns and no space to circle comfortably. Hard, on purpose.
+  5 EAST -> THE ARMOURY (x24-28 y7-13, light 4). Optional: autogun, armour,
+    shells. Symmetric with beat 4, so the player who does both walks into the
+    arena kitted and the player who does neither still gets in.
+  6 THE GREAT DOOR (16,13) opens onto a single dark cell (16,14), and then --
+  7 THE MAW (x9-26 y15-28, light 6). 18x14, the biggest room in ABYSS.
+    Twenty-three metal columns on a 3-cell pitch, a 2x2 glowing altar dead
+    centre, torches and two barrels. The doorway lands you at (16,15) between
+    two columns: the first view is four aisles opening at once.
+  8 The MAW waits at (17,25), directly behind the altar, so the boss and the
+    landmark are one silhouette -- you always know which way it is.
+  9 AMBUSH: the trigger line (15,16)-(17,16) is the three cells you must
+    cross to leave the doorway. Sealed panels at x8 and x27 open on the
+    flanks and four sleepers -- two hulks, two gunners -- come in from behind
+    the column rows. The fight starts with your back to a closed door.
+ 10 The column grid gives roughly twenty safe pivots instead of four, so the
+    boss fight is a running fight. Medkits at (10,22) and (25,22) sit in the
+    far corners: healing costs you position. Two barrels flank the altar.
+ 11 EXIT (16,28)-(17,28) is directly BEHIND the Maw against the south wall,
+    with a glow face. The last thing the level asks is that you get PAST it.
+end

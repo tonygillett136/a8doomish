@@ -1,0 +1,105 @@
+
+name: THE RED CISTERN
+level: 2
+spawn: 3,16 east
+par: 150
+default_light: 2
+
+legend:
+
+  Q wall secret
+  _ open secret
+  A open secret thing armour
+  z open secret thing shellbox
+end
+
+map:
+################################
+################################
+#####................###########
+#####..%.u%..%..%ur%.###########
+#####................###########
+##__#.^^^^^^^^^^^^^^.###########
+##AzQ................###########
+##__#.h%..%..%..%..%h###########
+#####................###########
+############..########.......###
+############..########.p.....###
+############..########.=..=..###
+#########........#####.......###
+#########.=..=..=#####.......###
+####.####..h.....#####.=..=..###
+##...=..........*##.##.......###
+##.@....m...s....R..s.....H..###
+##....=.........*###.#.=..=..###
+#######.#.=..=h.=#####.......###
+#########........#####.......###
+#########........#####.=..=..###
+##############..######..M....###
+##############..######p......###
+##############..######.=..=z.###
+#######............###..XX...###
+#######....h.......#####**######
+#######..=..=a...=.#############
+#######.s.......u..#############
+#######............#############
+################################
+################################
+################################
+end
+
+light:
+
+  rect 2 15 7 3 3       ; entry hall
+  rect 9 12 8 9 4       ; junction -- lit enough to read the red door
+  cell 17 15 7
+  cell 17 16 6
+  cell 17 17 7          ; torches flanking the locked door: look HERE
+  rect 12 9 2 3 1       ; north corridor, dark
+  rect 5 2 16 7 5       ; the cistern is open and bright
+  rect 6 5 14 1 6       ; the nukage channel glows
+  rect 2 5 2 3 4        ; secret vault
+  rect 14 21 2 3 1      ; south corridor, dark
+  rect 7 24 12 5 3      ; armoury, dim
+  rect 18 16 4 1 2      ; behind the red door: dark again
+  rect 22 9 7 16 5      ; finale hall
+  rect 24 24 2 1 7      ; the exit switch
+end
+
+notes:
+
+THE RED CISTERN -- show the locked door on the way IN, not on the way back.
+
+  1 SPAWN (3,16) facing east down a 3-wide entry hall. Columns at (5,15) and
+    (6,17) sit OFF the centre line -- row 16 is kept clear from the spawn all
+    the way to the door -- so the first frame has near silhouettes on both
+    flanks and a clear axis between them. At this range the far end is only a
+    suggestion; the corridor is the dark, tight half of the rhythm.
+  2 JUNCTION (x9-16 y12-20, light 4). Four or five steps in, at about six
+    cells, the far wall resolves and it is unmistakable: two glowing cells at
+    (16,15) and (16,17) stand one cell PROUD of the wall and between them is
+    a recessed slab. Because the frame is geometry and not just colour, the
+    door reads as a door on a renderer that does not yet draw materials. It
+    IS a door, it IS locked, and it is the only lit thing you have seen.
+    Landmark #1: every route from here is "back to the red door".
+  3 Two exits, north (x12-13) and south (x14-15), both dark one-cell
+    corridors. The level forks and neither fork is the door.
+  4 NORTH -> THE CISTERN (x5-20 y2-8, light 5). Sixteen cells across, split by
+    a glowing nukage channel at y5 that hurts to cross, with two rows of
+    broken rock columns so both banks read as space rather than void. The
+    channel is breached only at its ends (x5, x20): you can SEE the far bank
+    the whole time and you can see the price of the short route.
+  5 The RED KEY at (18,3) sits on the far bank with a gunner either side and a
+    rock column at (19,3) for them to fight from. Reward visible, cost visible.
+  6 SECRET: the cistern's west wall at (4,6) is fake. Armour + shells.
+  7 SOUTH -> THE ARMOURY (x7-18 y24-28, light 3). Optional, and signposted as
+    optional by being dim and dead-ended. Holds the AUTOGUN. Exploring makes
+    you measurably stronger for the finale; skipping it blocks nothing.
+  8 BACK TO THE DOOR along a route you already know -- the payoff for having
+    made the door a landmark in beat 2.
+  9 FINALE HALL (x22-28 y9-24, light 5). Tall, not wide: seven cells across
+    and sixteen deep, columned on a 3-cell pitch, so from the entrance at its
+    waist you look down two long aisles in opposite directions and cannot see
+    both ends at once. A hulk at (26,16) is on you immediately; spitters hold
+    the far ends. Exit at the bottom (x24-25 y24).
+end
