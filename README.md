@@ -270,8 +270,12 @@ doesn't.
   running off the bottom-right corner. Six redraws and two attempts at crossing
   the hue seam are all in the DEVLOG with what each one failed at. It is much
   better than it was and it is not solved.
-- **Wall courses are locked to screen rows, not depth**, so they do not recede
-  with the wall they are drawn on.
+- ~~Wall courses are locked to screen rows, not depth~~ — **FIXED**, after a
+  reviewer spotted it from a screenshot without ever seeing this list. Four
+  pre-scaled ladder variants (pitch 12/8/5/3) selected by distance: measured at
+  8 rows near and 5 far, where it was 4 everywhere. 1,158 bytes and **zero
+  cycles**, because the dispatch table it selects through was already indexed by
+  the wall's top row.
 
 ---
 
