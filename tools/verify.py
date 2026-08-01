@@ -374,6 +374,16 @@ class Sweep:
         self.chk('a hit shoves the player', kv >= 0x60,
                  'impulse magnitude $%02X (top speed is $40)' % kv)
 
+        # A fireball must read as a PROJECTILE. Until today slots 6-7 went
+        # through POSEMAP like actors, so every incoming ball was drawn as a
+        # full-size WALKING HUSK -- scale 192, animating. Found by the scout
+        # reading the draw path, not by anyone's eyes in eleven screenshots.
+        bpx, brows = self.fireball_footprint()
+        self.chk('a fireball is a small blob, not a husk',
+                 0 < bpx < 150 and brows <= 12,
+                 '%d px over %d rows at 3 cells (a husk there is ~200px/28 rows)'
+                 % (bpx, brows))
+
         gun = self.weapon_on_every_level()
         self.chk('the gun is drawn on every level', min(gun) >= 80,
                  'outline pixels per level: %s' % gun)
@@ -634,6 +644,29 @@ class Sweep:
         s.pull_trigger()
         s.go(30)
         return before, s.m()[KILLS]
+
+    def fireball_footprint(self):
+        import metrics as M
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        for i in range(6):
+            s.p[AC_LIVE + i] = 0
+        s.go(20)
+        ref = M.luma(M.grab(s.a))
+        m = s.m()
+        for _ in range(12):                      # pin it across a render tick
+            for off, v in ((0x08, m[PX_HI] + 3), (0x00, 0x80),
+                           (0x18, m[PY_HI]), (0x10, 0x80),
+                           (0x20, 2), (0x30, 9), (0x48, 128), (0x38, 200)):
+                s.p[0x7800 + off + 6] = v
+            s.a.frame(1)
+        now = M.luma(M.grab(s.a))
+        px = sum(1 for r in range(96) for c in range(80) if now[r][c] != ref[r][c])
+        rows = sum(1 for r in range(96)
+                   if any(now[r][c] != ref[r][c] for c in range(80)))
+        return px, rows
 
     def knockback_speed(self):
         VX_LO, VX_HI, VY_LO, VY_HI = 0xB0, 0xB1, 0xB2, 0xB3

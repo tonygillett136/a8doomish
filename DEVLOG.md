@@ -1877,3 +1877,18 @@ Proven live before the sweep: a hulk claw took health 100→84 (the per-type 16
 landing in play) and left velocity at exactly $FFA0 — the −KNOCK impulse,
 pointing away. The sweep gained "a hit shoves the player": impulse ≥ $60
 against a top speed of $40, measured the frame the health drop lands.
+
+**And the fireball howler.** The scout reading the sprite draw path reported
+that slots 6-7 go through POSEMAP like actors: spawn_ball sets AC_FRAME=0,
+ball_tick toggles it 0↔1 — poses 0/1, scale 192, walk-animated. **Every
+incoming fireball had been drawn as a full-size walking husk since the day
+projectiles went in.** Eleven screenshots, fourteen critic rounds and three
+blind identification tests never caught it, because nobody ever screenshotted
+the two-second window with a ball in flight. Slots ≥6 now force pose 5 (the
+shells art, scale 48): measured, a ball at 3 cells went from a ~200-pixel,
+28-row walking figure to a 76-pixel, 6-row blob at the floor line. The sweep
+asserts it stays one.
+
+63/63. Hurt floors and the rest of the juice list stay in ROADMAP.md — the
+lava needs a level-file edit and a map rebuild, and twenty minutes to the
+hard stop is not the window to re-verify byte-exact map planes in.

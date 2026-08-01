@@ -150,12 +150,25 @@ _sl_next
         sta ai_dyh
 
         ldx sp_slot             ; animation frame -> pose
+        cpx #6
+        bcc _ps_actor
+        ; Slots 6-7 are FIREBALLS, and until now they went through POSEMAP
+        ; like everyone else: spawn_ball sets AC_FRAME=0 and ball_tick toggles
+        ; it 0<->1, which maps to poses 0/1 -- so every incoming fireball was
+        ; drawn as a FULL-SIZE WALKING HUSK, scale 192, animating. A projectile
+        ; the size of the enemy that fired it, charging you. Pose 5 (the
+        ; shells art, scale 48) reads as what it is: a small bright thing
+        ; coming at your face.
+        lda #5
+        sta sp_pose
+        bne _ps_go
+_ps_actor
         lda AC_FRAME,x
         and #15
         tax
         lda POSEMAP,x
         sta sp_pose
-        jsr sp_billboard
+_ps_go  jsr sp_billboard
         inc sp_i
         jmp _sl_next
 _sl_alldone
