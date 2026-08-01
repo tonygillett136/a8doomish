@@ -651,7 +651,16 @@ class Sweep:
         s.go(10)
         s.pull_trigger()
         s.go(30)
-        return before, s.m()[KILLS]
+        after = s.m()[KILLS]
+        # ...and the intermission banner must SHOW the tally: force the
+        # level-cleared state and read the digits straight out of the text row.
+        s.p[WONDONE] = 1
+        s.go(6)
+        row = s.m()
+        digits = bytes(row[HUDRAM + 40 + 27:HUDRAM + 40 + 30])
+        s.p[WONDONE] = 0
+        want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
+        return before, after if digits == want else -1
 
     def nukage_bite(self):
         s = Sweep(self.xex)

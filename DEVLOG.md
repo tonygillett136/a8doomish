@@ -1914,3 +1914,12 @@ standing beside it — both halves checked, because a hazard that never stops is
 a softlock, not a hazard. And the full playthrough still finishes with zero
 deaths, so the autoplayer routes past what the designer intended players to
 route past. 64/64.
+
+### And the intermission learned to count
+
+Last feature under the wire: the FLOOR CLEARED banner — on screen for the two
+seconds between every level and previously saying nothing — now reports the
+kill tally. A tail call into the VBI-safe hud_num, three bytes of string
+change, and the check that verifies the counter now also reads the digits
+straight out of the text row, because a number that is counted but never shown
+is a debug variable, not a feature. 64/64.

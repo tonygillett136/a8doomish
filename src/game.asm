@@ -895,7 +895,7 @@ hud_labels
 win2_msg
         dta d'  YOU ESCAPED THE ABYSS         '
 won_msg
-        dta d'   LEVEL CLEARED - THE ABYSS    '
+        dta d'     FLOOR CLEARED - KILLS      '
 dead_msg
         dta d'  YOU DIED - FIRE TO RETRY      '
         ert * > $ABA0, "game.asm's table block has run into title.asm's at $ABA0"
@@ -1015,7 +1015,9 @@ _hu_won lda won_msg,x
         inx
         cpx #32
         bne _hu_won
-        rts
+        lda kills               ; the intermission tells you what the floor
+        ldx #27                 ; cost them: digits at columns 27-29
+        jmp hud_num             ; (tail call; hud_num is VBI-safe by design)
 _hu_notwon
         lda ai_ph
         bne _hu_alive
