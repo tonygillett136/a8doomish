@@ -12,3 +12,9 @@ SPWNY
         dta 14,16,27,3,7
         dta 21,5,27,16,19
         dta 6,27,7,18,18
+SPWNT
+        dta 1,1,1,1,1
+        dta 1,5,3,3,1
+        dta 1,1,1,3,3
+        dta 3,1,3,4,4
+        ert * > $2BC0, "spawn tables have grown into the level tables at $2BC0"

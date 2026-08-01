@@ -181,8 +181,11 @@ _vm     lda vstat_msg,x
         lda ai_ph               ; health left, at columns 9-11
         ldx #9
         jsr hud_num
-        lda ammo                ; shells left, at columns 21-23
-        ldx #21
+        lda kills               ; put down this run, at columns 20-22
+        ldx #20
+        jsr hud_num
+        lda ammo                ; shells left, at columns 28-30
+        ldx #28
         jsr hud_num
 _vrel   lda TRIG0T              ; same edge discipline as the title
         beq _vrel
@@ -226,8 +229,9 @@ title_sub
 victory_msg
         dta d'  YOU ESCAPED - FIRE TO REPLAY  '
 vstat_msg                       ; AMMO, not SHELLS: the status bar has called it
-        dta d'  HEALTH      AMMO              '   ; AMMO for four levels and the
-                                ; end card is the wrong place to rename a stat
+                                ; AMMO for four levels and the end card is the
+                                ; wrong place to rename a stat
+        dta d'  HEALTH      KILLS     AMMO    '
         ert * > $AC20, "title.asm's strings have overrun their block at $AC20"
         org _tstr_resume
 

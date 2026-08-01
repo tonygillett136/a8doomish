@@ -1779,3 +1779,80 @@ the emulator behind them got the same treatment.
 The audio engine — eleven effects verified for a whole project as POKEY
 register traces and never heard by anyone — now plays out loud on a CRT's
 speaker and in every visitor's browser.
+
+## The bestiary: the levels finally cast their own monsters
+
+Thirty-nine minutes on the clock, so this went in the order value falls:
+v1.0 tagged from the hardware-confirmed commit FIRST (a release should be the
+proven thing), then the single biggest gameplay multiplier the engine had been
+refusing: **enemy TYPES**.
+
+The level files have always asked for gunners, spitters, hulks and a maw; the
+engine shipped identical husks. The machinery was already there — projectiles,
+telegraphs, infighting, per-slot state — so types are four small tables indexed
+by `AC_TYPE` (HP, attack chance, melee damage, ball damage), a `SPWNT` table
+carried from the level files by genspawns.py, and per-type damage lookups at
+the four combat sites. The design law from spawn_actors holds: **HP steps are
+whole point-blank shots, never inflation.** A husk is one blast, exactly; a
+hulk is exactly two; a gunner dies to one point-blank or two mid-range. The
+one-shot stays the shotgun's identity precisely because the hulk is the
+exception to it.
+
+- **husk** (60 HP, chance 24) — the baseline, unchanged
+- **gunner** (32 HP, chance 40) — fragile, fires nearly twice as often
+- **spitter** (60 HP, chance 48, weak balls) — constant suppression
+- **hulk** (120 HP, chance 12, melee 16) — and it TOWERS: +25% sprite height,
+  measured on screen at 1.32× a husk at the same distance. The scale hook is
+  guarded by POSE, not just slot, because the same height path draws pickups
+  with a stale slot variable — the guard is what keeps a medkit from towering.
+- the authored **maw** ships with hulk stats: the boss STATS existed tonight,
+  the boss BEHAVIOUR did not, and a placeholder that plays fair beats a rushed
+  one that doesn't.
+
+Fireballs now carry their SHOOTER's damage, looked up through the ball's owner
+slot at the moment of impact — with the honest caveat in the comment that a
+recycled slot can flavour the number, never crash it.
+
+THE RED CISTERN now fields a hulk and two gunners; THE MAW greets you with
+gunners and spitters. THE VESTIBULE is all husks, exactly as authored — which
+also means every existing level-1 check kept its meaning, by design of the
+levels rather than by luck of the tests.
+
+Plus: a **KILLS counter** (incremented on the death transition, reset on retry,
+surviving mid-run descents) reported on the end card next to health and ammo.
+
+Three new sweep checks: the levels spawn their own bestiary (types match SPWNT
+on all four levels, three-plus distinct types across the game), the hulk towers
+(≥1.2× on-screen, measured in pixels), and kills are counted (0→1 over one
+point-blank shot). The type-table org promptly tripped the $ABA0 guard and was
+moved to $AC20 with its own — the guard law keeps earning its keep.
+
+### The statue army the sweep waved through
+
+The type tables went in, all four levels spawned their authored roster with the
+right HP, the hulk measurably towered — and the parallel scout that had been
+reading every `AC_TYPE` reference in the codebase came back with the real
+state of things: **six separate sites tested `cmp #TY_HUSK` for equality.**
+The shotgun (`cmp #1`, a literal). Damage. Line-of-sight waking. Gunfire
+alerting. Awake-counting. Both infight paths. Every new type was a bulletproof,
+deaf statue: never woken, never alerted, immune to every source of damage,
+invisible to infighting.
+
+And the acceptance sweep, run against exactly that build, came back **60 of
+61** — the one failure an incidental type-literal in a *check*, not a combat
+test. "The game can be completed" PASSED: the autoplayer simply shot the
+statues, gave up, and routed around them. Sixty green checks against a build
+whose headline feature did not function.
+
+The fix is one subroutine — `is_enemy`, Z=1 for any living enemy class,
+preserving each caller's flag semantics — swapped in at all seven sites, plus
+the two type-literals in the sweep itself. Verified the decisive way: a hulk
+goes 120 → 60 → 0 over exactly two point-blank shots, and a dormant gunner
+placed in view is awake and ATTACKING within 150 frames.
+
+Two lessons, both old friends wearing new hats. **Spawning is not
+functioning** — every one of my checks proved the types were BORN correctly and
+none proved they could fight or die. And the ultracode point, measured: the
+scout cost 169k tokens of parallel reading and caught in minutes what sixty
+green checks could not see at all, because it read for *references*, not for
+symptoms.

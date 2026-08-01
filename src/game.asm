@@ -862,6 +862,19 @@ LVHUEH  dta $22,$42,$02,$62
 FLCEIL  dta $04,$02,$00
 FLWALL  dta $08,$08,$08
 FLFLOR  dta $04,$04,$02
+; Per-enemy-type stats, indexed by AC_TYPE (0 unused, 1 husk, 2 fireball
+; placeholder, 3 gunner, 4 spitter, 5 hulk). They live in their own org at
+; $AC20 -- adding them here tipped this block into the title strings at $ABA0
+; and the guard fired, which is what it is for. The philosophy is in
+; spawn_actors: HP steps are whole point-blank shots, never inflation.
+_typ_resume = *
+        org $AC20
+THP     dta 0,60,0,32,60,120
+TATK    dta 0,24,0,40,48,12     ; /256 chance per tick, with line of sight
+TMELEE  dta 0,8,0,4,6,16
+TBALL   dta 0,12,0,10,8,16
+        ert * > $B000, "type tables have grown into actors.asm at $B000"
+        org _typ_resume
 
 ; The four status-band strings. They used to sit inline in the code region,
 ; each one parked between an `rts` and the next label so execution stepped over
@@ -1090,6 +1103,7 @@ lasthp   = $7A05
 painfl   = $7A06
 wondone  = $7A07                ; 1 once the exit has been reached
 deathfr  = $7A51                ; frames since death, drives the weapon drop
+kills    = $7A52                ; husks put down this run; the end card shows it
 hudcol   = $7A50                ; status-panel colour, set per level from LVHUEH.
                                 ; Absolute RAM, not ZP: $C2-$CF is full, and
                                 ; game.asm's ZP block ends hard against the
@@ -1108,7 +1122,7 @@ do_hitscan
         ldx #0
 _hs_loop
         lda AC_TYPE,x
-        cmp #1                  ; HUSK only
+        jsr is_enemy            ; any living enemy class stops the shot
         bne _hs_next
         lda AC_STATE,x
         cmp #ST_DYING
@@ -1200,6 +1214,7 @@ _rl_go2                         ; the victory restart joins here, having
         lda #0
         sta itmgot
         sta wonall
+        sta kills               ; a fresh run earns its own tally
         lda #100
         sta ai_ph
         sta lasthp
@@ -1340,16 +1355,19 @@ _sa_loop
         lda #$80                ; cell centre
         sta AC_XLO,x
         sta AC_YLO,x
-        lda #1                  ; HUSK
-        sta AC_TYPE,x
+        lda SPWNT,y             ; the type the LEVEL DESIGNER wrote: husk,
+        sta AC_TYPE,x           ; gunner, spitter or hulk
+        tay                     ; Y was the spawn index; done with it, so it
+        lda THP,y               ; becomes the type -> stat-table index.
+        sta AC_HP,x             ; A husk is still 60 HP on every level, ON
+                                ; PURPOSE: a point-blank blast does exactly 60,
+                                ; and that reliable one-shot IS the shotgun's
+                                ; identity. The hulk is 120 -- exactly two of
+                                ; them -- which makes the one-shot on everything
+                                ; else feel like the power it is.
         lda #0                  ; dormant until it sees you
         sta AC_STATE,x
         sta AC_FRAME,x
-        lda #60                 ; every husk is 60 HP on every level, ON PURPOSE:
-        sta AC_HP,x             ; a point-blank shotgun blast does exactly 60,
-                                ; and that reliable one-shot IS the weapon's
-                                ; identity. Difficulty comes from placement and
-                                ; geometry, not from HP inflation.
         inx
         cpx #NSPAWN
         bne _sa_loop

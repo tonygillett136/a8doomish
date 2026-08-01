@@ -390,6 +390,29 @@ _sh_nz  cmp #VIEW_H
         bcc _sh_ok
         lda #VIEW_H-1
 _sh_ok  sta sp_h
+        ; ---- the HULK is a head-and-shoulders taller --------------------
+        ; Same art, a quarter more height. Guarded by POSE, not just slot:
+        ; this path also draws pickups (poses 4-5) with a STALE sp_slot, so
+        ; the pose test is what keeps a medkit from towering.
+        lda sp_pose
+        cmp #4
+        bcs _sh_nohulk
+        ldx sp_slot
+        cpx #6
+        bcs _sh_nohulk
+        lda AC_TYPE,x
+        cmp #TY_HULK
+        bne _sh_nohulk
+        lda sp_h
+        lsr
+        lsr                     ; +25%
+        clc
+        adc sp_h
+        cmp #VIEW_H
+        bcc _sh_hk
+        lda #VIEW_H-1
+_sh_hk  sta sp_h
+_sh_nohulk
 
         lda #VIEW_H
         sec

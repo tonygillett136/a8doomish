@@ -42,6 +42,9 @@ AC_CLK  = AC_BASE+$70           ; RTCLOK at this actor's last update
 TY_NONE = 0
 TY_HUSK = 1
 TY_BALL = 2
+TY_GUNNER = 3                   ; hitscan-ish: fires often, dies to 2 mid shots
+TY_SPITTER = 4                  ; fires constantly, weak melee
+TY_HULK = 5                     ; two point-blank shots, hits like a train
 
 ; ---- states ---------------------------------------------------------------
 ST_DORMANT = 0
@@ -215,6 +218,27 @@ ai_clr3 sta $0602,x
         jmp spawn_level
 
 ; ---------------------------------------------------------------------------
+; is_enemy: A = a type byte -> Z=1 iff it is a LIVING ENEMY class (husk,
+; gunner, spitter, hulk). Exists because six separate sites -- the shotgun,
+; damage, LOS, alerting, awake-counting and both infight paths -- each tested
+; `cmp #TY_HUSK` for equality, so every NEW type was born a bulletproof, deaf
+; statue: never woken by line of sight, never alerted by gunfire, immune to
+; every source of damage, invisible to infighting. The acceptance sweep even
+; PASSED that build -- the autoplayer just routed around the statues. Found by
+; the parallel scout reading every AC_TYPE reference, not by any test.
+; Clobbers A only; preserves X and Y, because every caller's cmp did.
+is_enemy
+        beq _ie_no              ; 0: empty slot
+        cmp #TY_BALL
+        beq _ie_no              ; 2: a fireball is not a target
+        cmp #TY_HULK+1
+        bcs _ie_no              ; above the bestiary
+        lda #0                  ; Z=1 -- enemy
+        rts
+_ie_no  lda #1                  ; Z=0
+        rts
+
+; ---------------------------------------------------------------------------
 ; spawn_husk: A = cell x, Y = cell y.  Uses the first free slot in 0..5.
 spawn_husk
         sta ai_t0
@@ -346,7 +370,7 @@ count_awake                     ; live enemies that are neither dormant nor dead
         ldy #0
         ldx #5
 ca_l    lda AC_TYPE,x
-        cmp #TY_HUSK
+        jsr is_enemy            ; Z=1 for ANY living enemy class
         bne ca_n
         lda AC_STATE,x
         beq ca_n
@@ -534,9 +558,10 @@ ht_melee
         jsr calc_delta
         jsr in_melee
         bne ht_mel_miss
+        ldy AC_TYPE,x           ; melee damage is per TYPE now (TMELEE)
         lda ai_ph
         sec
-        sbc #MELEE_DMG
+        sbc TMELEE,y
         bcs ht_mel1
         lda #0
 ht_mel1 sta ai_ph
@@ -630,7 +655,8 @@ ht_c_ranged
         lda AC_LOS,x
         beq ht_move
         jsr rnd8
-        cmp #ATK_CHANCE
+        ldy AC_TYPE,x           ; fire rate is the type's personality: a
+        cmp TATK,y              ; spitter shoots twice as often as a husk
         bcs ht_move
         lda #ST_TELEG
         sta AC_STATE,x
@@ -835,7 +861,7 @@ get_target
         bmi gt_player
         tay
         lda AC_TYPE,y
-        cmp #TY_HUSK
+        jsr is_enemy            ; Z=1 for ANY living enemy class
         bne gt_revert
         lda AC_STATE,y
         cmp #ST_DYING
@@ -941,7 +967,7 @@ los_round_robin
         ldx #0
 lrr1    stx ai_rr
         lda AC_TYPE,x
-        cmp #TY_HUSK
+        jsr is_enemy            ; Z=1 for ANY living enemy class
         bne lrr_rts
         lda AC_STATE,x
         cmp #ST_DYING
@@ -1060,7 +1086,7 @@ actors_alert
         ldx #0
 aa_loop
         lda AC_TYPE,x
-        cmp #TY_HUSK
+        jsr is_enemy            ; Z=1 for ANY living enemy class
         bne aa_next
         lda AC_STATE,x
         bne aa_next             ; only DORMANT
@@ -1098,7 +1124,7 @@ aa_next
 actor_damage
         sta s5
         lda AC_TYPE,x
-        cmp #TY_HUSK
+        jsr is_enemy            ; Z=1 for ANY living enemy class
         bne ad_out2
         lda AC_STATE,x
         cmp #ST_DYING
@@ -1147,6 +1173,7 @@ ad_normal
         sta AC_FRAME,x
         inc DBG_DEATH
 ad_die
+        inc kills               ; the end card reports it; reset on retry
         lda #ST_DYING
         sta AC_STATE,x
         jmp ad_end
@@ -1286,9 +1313,14 @@ bt_wallok
         bpl bt_hitp
         jmp bt_kill
 bt_hitp
+        tay                     ; A = owner slot (bpl proved it is 0..5)
+        lda AC_TYPE,y           ; the ball hits with its SHOOTER's ball damage.
+        tay                     ; If the shooter died and the slot was reused
+        lda TBALL,y             ; the type may be a successor's -- rare, and it
+        sta ai_t1               ; only flavours the number, never crashes
         lda ai_ph
         sec
-        sbc #BALL_DMG
+        sbc ai_t1
         bcs bt_p1
         lda #0
 bt_p1   sta ai_ph
@@ -1303,7 +1335,7 @@ bt_a_loop
         cmp s5
         beq bt_a_next
         lda AC_TYPE,y
-        cmp #TY_HUSK
+        jsr is_enemy            ; Z=1 for ANY living enemy class
         bne bt_a_next
         lda AC_STATE,y
         cmp #ST_DYING
@@ -1333,11 +1365,21 @@ bt_a_loop
         bne bt_a_next
         lda AC_TGT,x            ; the shooter becomes the victim's new enemy
         sta ai_attacker
+        ldy ai_attacker         ; per-type ball damage, via the shooter
+        bmi bt_dmgdef           ; $FF owner: keep the classic 12
+        lda AC_TYPE,y
+        tay
+        lda TBALL,y
+        bne bt_dmggo
+bt_dmgdef
+        lda #BALL_DMG
+bt_dmggo
+        sta ai_t1
         lda #0
         sta AC_TYPE,x           ; consume the fireball before the callback
         sta AC_STATE,x
         ldx s5
-        lda #BALL_DMG
+        lda ai_t1
         jsr actor_damage
         ldx ai_i
         rts
@@ -1345,7 +1387,9 @@ bt_a_next
         ldy s5
         iny
         cpy #6
-        bne bt_a_loop
+        beq _bt_a_done          ; bne bt_a_loop went out of range by ONE byte
+        jmp bt_a_loop           ; when is_enemy calls replaced the cmps
+_bt_a_done
         rts
 
 bt_kill

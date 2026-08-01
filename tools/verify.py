@@ -28,6 +28,9 @@ WSTATE  = 0x00B7
 WKICK   = 0x00B8
 AC_LIVE, AC_XHI, AC_XLO, AC_YHI, AC_YLO, AC_STATE, AC_HP = (
     0x7820, 0x7808, 0x7800, 0x7818, 0x7810, 0x7830, 0x7840)
+AC_TYPE = 0x7820                # same array as AC_LIVE: 0 = empty slot
+SPWNT   = 0x2BA8                # spawn TYPE table (genspawns.py)
+KILLS   = 0x7A52
 HEALTH  = 0x7878
 MAPBASE = 0x7000
 ATTRBASE = 0x7400
@@ -98,7 +101,7 @@ class Sweep:
         self.chk('HUD labels restored', bytes(m[HUDRAM + 40:HUDRAM + 46]) == b'HEALTH'.translate(
             bytes((c - 32) & 0xFF for c in range(256))))
         self.chk('playfield is $22 (wide)', m[SDMCTL] == 0x22)
-        self.chk('five enemies spawned', sum(1 for i in range(6) if m[AC_LIVE + i] == 1) == 5)
+        self.chk('five enemies spawned', sum(1 for i in range(6) if m[AC_LIVE + i] in (1, 3, 4, 5)) == 5)
 
         before = (m[PX_HI], m[PX_LO])
         self.go(120, joy=0x01)
@@ -172,7 +175,7 @@ class Sweep:
                 solid_ok = False
             if bytes(mm[ATTRBASE:ATTRBASE + 0x400]) != ref[lvl][1]:
                 attr_ok = False
-            if sum(1 for i in range(6) if mm[AC_LIVE + i] == 1) != 5:
+            if sum(1 for i in range(6) if mm[AC_LIVE + i] in (1, 3, 4, 5)) != 5:
                 spawn_ok = False
         self.chk('levels 2-4 solid plane exact', solid_ok)
         self.chk('levels 2-4 attribute plane exact', attr_ok)
@@ -347,6 +350,22 @@ class Sweep:
         self.chk('runs with BASIC enabled, as a real XL boots',
                  rb > 0 and hb == 100,
                  '%d world frames, health %d' % (rb, hb))
+
+        # The bestiary: every level must spawn the TYPES its level file
+        # authors, not a table's idea of them -- and the stats must follow.
+        bes = self.bestiary_ok()
+        self.chk('the levels spawn their own bestiary', bes[0],
+                 'distinct types across the game: %d, mismatches: %d' % (bes[1], bes[2]))
+        # ...and a hulk must visibly TOWER, measured in the picture: same spot,
+        # same distance, ~a third taller than a husk.
+        hr = self.hulk_ratio()
+        self.chk('the hulk towers over a husk', hr >= 1.2,
+                 'on-screen height ratio %.2f' % hr)
+        # ...and the kills counter counts. One husk, one point-blank shot,
+        # kills goes 0 -> 1. The end card reads this.
+        kb, ka = self.kill_counts()
+        self.chk('kills are counted', kb == 0 and ka == 1,
+                 'kills %d -> %d over one point-blank shot' % (kb, ka))
 
         gun = self.weapon_on_every_level()
         self.chk('the gun is drawn on every level', min(gun) >= 80,
@@ -541,6 +560,73 @@ class Sweep:
         s.go(250)
         m = s.m()
         return m[RENDERS], m[HEALTH]
+
+    def bestiary_ok(self):
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        seen, bad = set(), 0
+        for lvl in range(4):
+            if lvl:
+                if not s.descend():
+                    return (False, len(seen), 99)
+                s.go(40)
+            m = s.m()
+            for i in range(5):
+                t = m[AC_TYPE + i] or None
+                # a slot may already be a corpse mid-check; type persists
+                if t:
+                    seen.add(t)
+                if m[SPWNT + lvl * 5 + i] not in (m[AC_TYPE + i], 0)                    and m[AC_TYPE + i] != 0:
+                    bad += 1
+        return (bad == 0 and len(seen) >= 3, len(seen), bad)
+
+    def hulk_ratio(self):
+        import metrics as M
+
+        def rows(ty):
+            s = Sweep(self.xex)
+            s.a.frame(80)
+            s.pull_trigger()
+            s.a.frame(200)
+            for i in range(6):
+                s.p[AC_LIVE + i] = 0
+            s.go(20)
+            ref = M.luma(M.grab(s.a))
+            m = s.m()
+            for ad, v in ((AC_XHI, m[PX_HI] + 3), (AC_XLO, 0x80),
+                          (AC_YHI, m[PY_HI]), (AC_YLO, 0x80),
+                          (AC_LIVE, 1), (AC_STATE, 1), (AC_HP, 250)):
+                s.p[ad] = v
+            s.p[AC_TYPE] = ty
+            for _ in range(20):
+                s.p[AC_HP] = 250
+                s.p[AC_TYPE] = ty
+                s.a.frame(1)
+            now = M.luma(M.grab(s.a))
+            return sum(1 for r in range(96)
+                       if any(now[r][c] != ref[r][c] for c in range(80)))
+
+        return rows(5) / max(1, rows(1))
+
+    def kill_counts(self):
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        m = s.m()
+        before = m[KILLS]
+        for i in range(1, 6):
+            s.p[AC_LIVE + i] = 0
+        for ad, v in ((AC_XHI, m[PX_HI] + 1), (AC_XLO, 0x80),
+                      (AC_YHI, m[PY_HI]), (AC_YLO, 0x80),
+                      (AC_LIVE, 1), (AC_STATE, 1), (AC_HP, 60)):
+            s.p[ad] = v
+        s.go(10)
+        s.pull_trigger()
+        s.go(30)
+        return before, s.m()[KILLS]
 
     def weapon_on_every_level(self):
         """Outline pixels of the held weapon, one count per level.
