@@ -44,8 +44,10 @@ level. The end card already reports kills; add par time.
   the knobs all exist now.
 
 ### M5 — The Release
-- **ABBUC Software Contest** entry (submissions typically close late summer —
-  check the current year's deadline EARLY).
+- **ABBUC Software Contest**: the 2026 game deadline appears to have been
+  31 July 2026 — the day ABYSS was built (verify on abbuc.de; found via search
+  2026-08-01). Target the **2027** contest, which buys a year for M2-M4 to land
+  first. AtariAge + itch.io need no deadline; do those any time.
 - AtariAge homebrew forum post with the site link.
 - itch.io page embedding the web build.
 - **Cartridge feasibility**: 28.9 KB fits a 32K cart image; investigate
