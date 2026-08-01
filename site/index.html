@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ABYSS — a DOOM-flavoured shooter for the Atari 800XL</title>
+<meta name="description" content="A first-person raycast shooter for a 1983 Atari 800XL. 6502 assembly, 28KB, built in one night. Play it in your browser.">
+<meta property="og:title" content="ABYSS — four floors down, no way up">
+<meta property="og:description" content="A DOOM-flavoured raycaster for the Atari 800XL. 28KB of 6502. Play it in your browser.">
+<meta property="og:image" content="https://abyss.gillett-projects.com/img/03_corridor.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23120a08'/><rect y='12' width='100' height='30' fill='%231a6b73'/><rect y='42' width='100' height='34' fill='%23913c31'/><rect y='76' width='100' height='24' fill='%23a97b2d'/></svg>">
+<style>
+:root{
+  --ink:#e8ddd0; --dim:#9b8d7c; --bg:#0b0908; --panel:#151011;
+  --teal:#1f7480; --teal-d:#0d3a42;
+  --stone:#a04a3c; --stone-d:#4a1d16;
+  --gold:#c69544; --gold-d:#6e4a1a;
+  --line:#2a201c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);
+  font:16px/1.65 ui-monospace,'Cascadia Mono','JetBrains Mono',Menlo,Consolas,monospace;}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+
+/* ---- hero: the game's own three bands ---- */
+.hero{position:relative;overflow:hidden;text-align:center;
+  background:
+    linear-gradient(180deg,
+      #05080a 0%, var(--teal-d) 18%, var(--teal) 34%,
+      var(--stone-d) 34.2%, var(--stone) 46%, var(--stone-d) 62%,
+      var(--gold-d) 62.2%, #2b1c08 88%, #000 100%);
+  padding:72px 20px 64px}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.22) 3px 4px)}
+.hero h1{font-size:clamp(64px,14vw,150px);letter-spacing:.08em;line-height:1;
+  font-weight:800;color:#f4e3c8;
+  text-shadow:0 3px 0 #7c3428, 0 6px 0 #47170f, 0 10px 24px rgba(0,0,0,.8);
+  position:relative;z-index:1}
+.hero p.tag{position:relative;z-index:1;margin-top:18px;font-size:clamp(15px,2.4vw,21px);
+  color:#f4e3c8;text-shadow:0 2px 6px rgba(0,0,0,.8);letter-spacing:.04em}
+.hero p.sub{position:relative;z-index:1;margin-top:8px;color:#d8c19a;font-size:14px;
+  text-shadow:0 2px 6px rgba(0,0,0,.8)}
+.cta{position:relative;z-index:1;margin-top:34px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-block;padding:13px 26px;border:2px solid #f4e3c8;color:#f4e3c8;
+  font-weight:700;letter-spacing:.1em;font-size:15px;background:rgba(0,0,0,.35);
+  box-shadow:0 4px 0 rgba(0,0,0,.5)}
+.btn:hover{background:#f4e3c8;color:#3a120c;text-decoration:none}
+.btn.primary{background:#8a2f20;border-color:#f4b96a}
+.btn.primary:hover{background:#f4b96a;color:#3a120c}
+
+/* ---- sections ---- */
+section{padding:64px 0;border-top:1px solid var(--line)}
+h2{font-size:26px;letter-spacing:.14em;color:var(--gold);margin-bottom:8px}
+h2::before{content:"// ";color:var(--dim)}
+.lead{color:var(--dim);max-width:70ch;margin-bottom:28px}
+
+/* ---- emulator ---- */
+.emu-shell{background:#000;border:1px solid var(--line);box-shadow:0 0 60px rgba(31,116,128,.12), 0 20px 60px rgba(0,0,0,.6);
+  max-width:756px;margin:0 auto;position:relative}
+#screen{display:block;width:100%;image-rendering:pixelated;background:#000;aspect-ratio:336/240}
+.emu-scan{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.18) 2px 3px)}
+#gate{position:absolute;inset:0;display:flex;flex-direction:column;gap:14px;
+  align-items:center;justify-content:center;background:rgba(5,4,3,.86);cursor:pointer;z-index:3}
+#gate b{font-size:clamp(18px,3vw,26px);letter-spacing:.2em;color:#f4b96a}
+#gate span{color:var(--dim);font-size:13px}
+#gate.loading b{color:var(--dim);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.4}}
+.emu-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:10px 12px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+.emu-bar .keys{color:var(--dim);font-size:13px}
+.emu-bar .keys b{color:var(--ink);background:#241b18;padding:1px 7px;border:1px solid var(--line);border-radius:3px}
+.emu-bar button{background:#241b18;color:var(--ink);border:1px solid var(--line);
+  padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.emu-bar button:hover{border-color:var(--gold)}
+#touch{display:none}
+@media (pointer:coarse){
+  #touch{display:flex;justify-content:space-between;padding:12px;gap:12px}
+  .pad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px)}
+  .pad div{border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    color:var(--dim);user-select:none;-webkit-user-select:none;touch-action:none}
+  .pad div:active{background:#333}
+  #fireBtn{width:92px;height:92px;border:2px solid var(--stone);border-radius:50%;
+    align-self:center;display:flex;align-items:center;justify-content:center;color:var(--stone);
+    font-weight:700;letter-spacing:.1em;user-select:none;-webkit-user-select:none;touch-action:none}
+  #fireBtn:active{background:var(--stone-d)}
+}
+
+/* ---- gallery ---- */
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.shots figure{background:var(--panel);border:1px solid var(--line);padding:10px}
+.shots img{width:100%;display:block;image-rendering:pixelated}
+.shots figcaption{padding:10px 4px 2px;font-size:13px;color:var(--dim)}
+.shots figcaption b{color:var(--ink)}
+
+/* ---- numbers strip ---- */
+.numbers{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line)}
+.numbers div{background:var(--panel);padding:22px 16px;text-align:center}
+.numbers b{display:block;font-size:30px;color:var(--gold)}
+.numbers span{font-size:12.5px;color:var(--dim);letter-spacing:.05em}
+
+/* ---- tech / story ---- */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px}
+.card{background:var(--panel);border:1px solid var(--line);padding:24px}
+.card h3{color:var(--teal);font-size:16px;letter-spacing:.08em;margin-bottom:10px}
+.card p{font-size:14.5px;color:#c8bbaa}
+.card code{color:var(--gold);background:#241b18;padding:0 5px;border-radius:3px;font-size:13px}
+.saga{border-left:3px solid var(--stone);padding-left:22px;margin-top:20px}
+.saga h3{color:var(--stone);letter-spacing:.06em;font-size:15px;margin:18px 0 4px}
+.saga p{font-size:14.5px;color:#c8bbaa;max-width:75ch}
+
+footer{border-top:1px solid var(--line);padding:44px 0;color:var(--dim);font-size:13.5px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>ABYSS</h1>
+  <p class="tag">FOUR FLOORS DOWN, NO WAY UP</p>
+  <p class="sub">A DOOM-flavoured first-person shooter for a 1983 Atari 800XL &middot; 6502 assembly &middot; 28 KB &middot; built in one night &middot; runs on the real thing</p>
+  <div class="cta">
+    <a class="btn primary" href="#play">&#9654;&#xFE0E; PLAY IN YOUR BROWSER</a>
+    <a class="btn" href="emu/abyss.xex" download>&#8681;&#xFE0E; GET THE XEX</a>
+    <a class="btn" href="https://github.com/tonygillett136/a8doomish">SOURCE</a>
+  </div>
+</header>
+
+<section id="play">
+  <div class="wrap">
+    <h2>PLAY</h2>
+    <p class="lead">This is the real game — byte-for-byte the same 28,723-byte executable that runs
+    on the hardware, here running in an Atari 800XL emulator compiled to WebAssembly. PAL, with
+    sound: an audio engine that for most of this game's life was verified only as POKEY register
+    traces, never actually heard.</p>
+    <div class="emu-shell">
+      <canvas id="screen" width="336" height="240"></canvas>
+      <div class="emu-scan"></div>
+      <div id="gate"><b>CLICK TO DESCEND</b><span>boots a PAL 800XL &middot; enables sound</span></div>
+    </div>
+    <div class="emu-shell" style="margin-top:0;border-top:none">
+      <div class="emu-bar">
+        <span class="keys"><b>&larr;&uarr;&darr;&rarr;</b> or <b>WASD</b> move &nbsp; <b>SPACE</b>/<b>X</b> fire &nbsp;&middot;&nbsp; fire starts, and fires — that's the whole scheme</span>
+        <span>
+          <button id="muteBtn">SOUND: ON</button>
+          <button id="fsBtn">FULLSCREEN</button>
+          <button id="resetBtn">REBOOT</button>
+        </span>
+      </div>
+      <div id="touch">
+        <div class="pad">
+          <div></div><div data-j="1">&uarr;</div><div></div>
+          <div data-j="4">&larr;</div><div></div><div data-j="8">&rarr;</div>
+          <div></div><div data-j="2">&darr;</div><div></div>
+        </div>
+        <div id="fireBtn">FIRE</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>THE DESCENT</h2>
+    <p class="lead">Four hand-authored floors, each with its own light. Husks that chase, telegraph,
+    attack and infight. A shotgun with range-banded damage and a muzzle flash that lights the room
+    rather than replacing it. Doors, pickups, death, retry — and a real exit on every floor,
+    proven reachable by a test that walks there.</p>
+    <div class="shots">
+      <figure><img src="img/02_vestibule.png" alt="The Vestibule"><figcaption><b>THE VESTIBULE</b> — teal vault, red stone, gold floor</figcaption></figure>
+      <figure><img src="img/08_red_cistern.png" alt="The Red Cistern"><figcaption><b>THE RED CISTERN</b> — a columned hall in magenta</figcaption></figure>
+      <figure><img src="img/09_silent_colonnade.png" alt="Silent Colonnade"><figcaption><b>SILENT COLONNADE</b> — grey stone under a blue vault</figcaption></figure>
+      <figure><img src="img/10_the_maw.png" alt="The Maw"><figcaption><b>THE MAW</b> — violet stone, burning red sky</figcaption></figure>
+      <figure><img src="img/04_husk.png" alt="A husk"><figcaption><b>A HUSK</b> — dormant &rarr; chase &rarr; telegraph &rarr; attack. It stays where it dies.</figcaption></figure>
+      <figure><img src="img/05_muzzleflash.png" alt="Muzzle flash"><figcaption><b>THE FLASH</b> — each band keeps its hue; the thing you shot at stays visible</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>THE MACHINE</h2>
+    <p class="lead">An Atari 800XL has a 1.77&nbsp;MHz 6502 and 64&nbsp;KB of RAM.
+    A full-screen repaint costs more than a frame. Every part of this is a small measured decision:</p>
+    <div class="numbers">
+      <div><b>28&thinsp;KB</b><span>THE WHOLE GAME</span></div>
+      <div><b>5</b><span>CYCLES PER PIXEL</span></div>
+      <div><b>~11 fps</b><span>WORLD RENDER</span></div>
+      <div><b>50 Hz</b><span>EVERYTHING YOU FEEL</span></div>
+      <div><b>58/58</b><span>ACCEPTANCE CHECKS</span></div>
+      <div><b>1</b><span>NIGHT TO BUILD</span></div>
+    </div>
+    <div class="cols" style="margin-top:26px">
+      <div class="card"><h3>SUFFIX LADDERS</h3>
+        <p>Columns are painted by <code>JSR</code>-ing into unrolled store chains at a computed
+        offset. The entry point <em>is</em> the run length: no loop counter, no compare per pixel,
+        no overdraw. Five cycles a pixel is the floor for a 6502, and this sits on it.</p></div>
+      <div class="card"><h3>THE 50&thinsp;Hz TRICK</h3>
+        <p>The world redraws at ~11 fps, but input, the weapon, the kick, the bob, audio and the
+        HUD all run in the vertical-blank interrupt at 50&thinsp;Hz and never wait. Pull the trigger and
+        the gun fires on the <em>next video frame</em>. The parts you feel are never on the slow path.</p></div>
+      <div class="card"><h3>A FLASH THAT CANNOT EXIST</h3>
+        <p>GTIA mode 9 ORs each pixel into the background colour's low nibble — which every
+        reference says to keep at zero. Writing a single bit there instead lifts the whole picture:
+        a full-screen muzzle flash, four register writes, in a mode with no business having one.</p></div>
+      <div class="card"><h3>MEASURED, NOT CLAIMED</h3>
+        <p>Every screenshot on this page is generated by a tool that asserts each frame against
+        the game state it claims to show. The acceptance sweep path-finds to every exit, plays the
+        whole game through, and soaks it for 60,000 frames. <a href="https://github.com/tonygillett136/a8doomish/blob/main/DEVLOG.md">The DEVLOG</a> records every wrong turn.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>THE SAGA</h2>
+    <p class="lead">Built overnight, 31 July 2026, by Claude and Tony Gillett — an experiment in how
+    close an 8-bit machine can get to the <em>feel</em> of DOOM, with an emulator harness measuring
+    every step. Then it met real hardware.</p>
+    <div class="saga">
+      <h3>RUN 1 — IT CORRUPTS AND ROLLS</h3>
+      <p>Three modules lived at $A000–$BFFF: the BASIC ROM's address space on a real XL. The emulator
+      boots with BASIC off; the hardware boots with it on. 130 green test runs never stood a chance
+      of seeing it. Fixed with an eight-byte stub that banks the ROM out before anything loads.</p>
+      <h3>RUN 2 — THE TITLE APPEARS. STILL ROLLING.</h3>
+      <p>The display list asked ANTIC for 248 scanlines against a hard limit of 240 — playfield DMA
+      running where the vertical sync should be. The emulator renders a fixed window and simply
+      clipped it; a CRT rolls. Two of the four status rows were blank anyway. Now 232.</p>
+      <h3>RUN 3 — IT RUNS.</h3>
+      <p>1 August 2026: the fixed build boots, locks and plays on the real 800XL, off an SD card,
+      on a CRT. Both fixes are now assertions in the test sweep, and the question they left behind
+      is the project's best souvenir: not <em>does it pass?</em> but
+      <em>what can this harness not see, even in principle?</em></p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (28,723 bytes)</span>
+    <span>Built by <a href="https://claude.com/claude-code">Claude Code</a> with Tony Gillett.
+    Not affiliated with id Software; DOOM is a trademark of id Software LLC.</span>
+  </div>
+</footer>
+
+<script src="emu/a8core.js"></script>
+<script src="emu/player.js"></script>
+</body>
+</html>

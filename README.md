@@ -2,7 +2,8 @@
 
 <p align="center">
   <b>A DOOM-flavoured first-person shooter for a stock Atari 800XL.</b><br>
-  40-column raycaster, 6502 assembly, 28 KB, one night.
+  40-column raycaster, 6502 assembly, 28 KB, one night. Runs on the real thing.<br><br>
+  <a href="https://abyss.gillett-projects.com"><b>&#9654;&#xFE0E; PLAY IT IN YOUR BROWSER</b></a>
 </p>
 
 <p align="center">
@@ -19,7 +20,9 @@
 
 ---
 
-> **Status — playable prototype, two hardware runs, two bugs found.**
+> **Status — runs on real hardware.** Confirmed 1 August 2026 on a PAL 800XL
+> via a Lotharek SDIO card, after two bring-up runs each found a bug the
+> emulator could not see:
 >
 > **Run 1** on a real PAL 800XL (via a Lotharek SDIO card): corrupted on load.
 > Three modules live in `$A000–$BFFF`, which is the BASIC ROM on an XL — and the
@@ -31,7 +34,8 @@
 > display list asked ANTIC for **248 scanlines** against a hard limit of 240, so
 > the last status row was still doing playfield DMA when the vertical sync should
 > have been. Two of the four status rows were blank, so dropping them costs
-> nothing visible and brings the frame to 232. **Not yet retested on hardware.**
+> nothing visible and brings the frame to 232. **Run 3 confirmed both fixes: it
+> boots, locks and plays.**
 >
 > Neither bug was visible to the emulator, for two different reasons: it booted a
 > configuration the hardware doesn't, and it renders a fixed 240-line window so it
@@ -241,9 +245,9 @@ number.
 Stated plainly, because a prototype that oversells itself is worse than one that
 doesn't.
 
-- **Two hardware runs, two bugs, not yet retested.** See the status note at the
-  top. Both were things the emulator cannot observe, which is the most useful
-  thing this project has learned.
+- ~~Never run on real hardware~~ **It runs on real hardware** — see the status
+  note. The two bring-up bugs were both things the emulator cannot observe,
+  which is the most useful thing this project has learned.
 - **No keys or locked doors.** The map format supports them and two levels author
   them, so the level compiler compiles locked doors down to plain ones rather
   than ship levels whose exits cannot be reached.
@@ -254,8 +258,9 @@ doesn't.
   item types collapse to medkits and shells.
 - **Triggers are not loaded**, so sealed monster closets never open. SILENT
   COLONNADE authors thirteen actors and only five are reachable.
-- **Audio has never been heard.** It is verified as POKEY register traces only.
-  Whether it *sounds* right on a TV speaker is unknown.
+- **Audio went unheard for most of the project** — verified as POKEY register
+  traces only, until the hardware run and [the browser build](https://abyss.gillett-projects.com)
+  finally played it out loud.
 - **The held weapon does not reliably read as held.** It is drawn on every level —
   measured, 109–118 outline pixels — with an outline, a lit bevel and a barrel,
   running off the bottom-right corner. Six redraws and two attempts at crossing

@@ -1739,3 +1739,43 @@ after collection, bitmask verified. Both position-dependent checks now read the
 live tables.
 
 58/58.
+
+## Run 3: it runs — and then everyone else could run it too
+
+**1 August 2026: the fixed build boots, locks and plays on the real 800XL.**
+Both hardware fixes confirmed on the CRT. The gate this project was named after
+is passed.
+
+The same day it went public twice over: the source at
+github.com/tonygillett136/a8doomish, and a website with the game PLAYABLE IN THE
+BROWSER at **https://abyss.gillett-projects.com** — the identical 28,723-byte
+XEX, running in the project's own emulator core compiled to WebAssembly.
+
+That last part is worth recording, because it inverted the usual embed problem.
+The Scopa site's emulator hunt (JSSpeccy abandoned, Qaop adopted) taught three
+laws: main thread, no COOP/COEP headers, and never ship an embed you cannot
+verify headless. Rather than audition third-party Atari emulators against those
+laws, the answer was already in the toolchain: **libatari800 — the exact C API
+the whole acceptance sweep drives in-process through Python — compiles to WASM
+in one pass**, and `site/emu/player.js` is simply `tools/a8.py` ported to
+JavaScript: same input struct, same 336-px visible window, same palette table,
+driven from requestAnimationFrame instead of a Python loop. Single-threaded, so
+no SharedArrayBuffer, so no COEP. 456 KB of wasm.
+
+One build gotcha for the notes: emconfigure/emmake worked until the archive
+step, where the Makefile called the HOST macOS `ranlib` on wasm objects and
+produced a 96-byte empty archive that `make` then reported as up to date. The
+fix is to archive the objects directly with `emar`. An empty archive with a
+fresh timestamp is another instance of the project's oldest lesson — a
+plausible artefact is worse than an error.
+
+And the embed was verified the Scopa way before it shipped: Playwright drove
+the LIVE page, clicked the gate, dispatched a held Space, and then read the
+game's own RAM through an exposed peek — `intitle` 1→0, `RENDERS` counting,
+health 100 — the same state assertions the acceptance sweep makes, now made
+against the deployed site. The screenshots on the page are asserted screenshots;
+the emulator behind them got the same treatment.
+
+The audio engine — eleven effects verified for a whole project as POKEY
+register traces and never heard by anyone — now plays out loud on a CRT's
+speaker and in every visitor's browser.
