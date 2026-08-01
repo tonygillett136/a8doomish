@@ -1377,6 +1377,40 @@ _sa_loop
 
 
 ; ============================================================================
+; check_floor -- the ground can hate you. Attribute bit 7 is HURT ("nukage" in
+; MAPFORMAT.md), and THE RED CISTERN's glowing channel and THE MAW's causeway
+; gutters have AUTHORED it since the levels were written -- 32 cells of lava
+; the runtime never read. Now it does: ~4 HP a bite, a bite roughly every
+; third render tick (gated on RTCLK low bits, so the rate follows wall clock,
+; not frame rate). The pain flash, the sound and the new gun-jolt all come
+; free through the lasthp path -- the VBI notices health fell and does the
+; rest. Runs on the render tick, main loop only.
+; ============================================================================
+check_floor
+        ldy py_hi
+        lda MAPROW_LO,y         ; solid-plane row base (actors.asm tables)
+        clc
+        adc px_hi
+        sta gt0
+        lda MAPROW_HI,y
+        adc #4                  ; the attr plane sits exactly $0400 above
+        sta gt1
+        ldy #0
+        lda (gt0),y
+        bpl _cf_ok              ; bit 7 = hurt
+        lda RTCLK
+        and #$0F
+        bne _cf_ok
+        lda ai_ph
+        beq _cf_ok              ; already dead: the floor cannot kill you twice
+        sec
+        sbc #4
+        bcs _cf_st
+        lda #0
+_cf_st  sta ai_ph
+_cf_ok  rts
+
+; ============================================================================
 ; check_items -- walking over a pickup collects it. Called once per render
 ; tick from the main loop; four compares, so the cost is noise.
 ; ============================================================================

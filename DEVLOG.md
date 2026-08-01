@@ -1892,3 +1892,25 @@ asserts it stays one.
 63/63. Hurt floors and the rest of the juice list stay in ROADMAP.md — the
 lava needs a level-file edit and a map rebuild, and twenty minutes to the
 hard stop is not the window to re-verify byte-exact map planes in.
+
+## The floor was always lava
+
+The hurt-floor scout came back with the fact that turned a planned feature into
+a twenty-byte patch: **THE RED CISTERN's glowing nukage channel and THE MAW's
+causeway gutters have authored attribute bit 7 — HURT — since the levels were
+written.** Thirty-two cells of lava, compiled into the shipped attr planes,
+RLE-packed, decompressed on every descent, byte-compared by the sweep on every
+run… and never once read by the runtime. The level designer built hazards; the
+engine walked the player through them like they were carpet.
+
+`check_floor` now runs on the render tick: row-table addressing plus the $0400
+attr-plane offset, test bit 7, and ~4 HP a bite gated on the wall clock so the
+rate ignores the frame rate. The pain flash, the sound and the gun-jolt all
+arrive free through the lasthp path — the VBI notices health fell and does the
+rest. No level edit, no map rebuild, no new data: the content was waiting.
+
+Measured: 16 HP lost over five seconds standing in the channel, exactly 0
+standing beside it — both halves checked, because a hazard that never stops is
+a softlock, not a hazard. And the full playthrough still finishes with zero
+deaths, so the autoplayer routes past what the designer intended players to
+route past. 64/64.

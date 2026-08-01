@@ -184,6 +184,7 @@ _ml_play
         jsr do_fire             ; consume the 50Hz trigger latch
         jsr move_player         ; momentum + per-axis collision
         jsr check_items         ; walk over a pickup to take it
+        jsr check_floor         ; nukage bites (attr bit 7, authored all along)
         jsr actors_update       ; enemy state machines (render tick)
         jsr render_view
         jsr draw_sprites        ; billboards, depth-clipped against COLDIST

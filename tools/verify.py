@@ -384,6 +384,14 @@ class Sweep:
                  '%d px over %d rows at 3 cells (a husk there is ~200px/28 rows)'
                  % (bpx, brows))
 
+        # The ground can hate you: THE RED CISTERN's nukage channel and THE
+        # MAW's gutters have authored attr bit 7 since the levels were written.
+        # Standing in it drains; stepping out stops -- both halves checked,
+        # because a hazard that never stops is a softlock, not a hazard.
+        hin, hout = self.nukage_bite()
+        self.chk('nukage bites, and only nukage', hin >= 8 and hout == 0,
+                 'lost %d HP in 5s standing in it, %d in 5s beside it' % (hin, hout))
+
         gun = self.weapon_on_every_level()
         self.chk('the gun is drawn on every level', min(gun) >= 80,
                  'outline pixels per level: %s' % gun)
@@ -644,6 +652,27 @@ class Sweep:
         s.pull_trigger()
         s.go(30)
         return before, s.m()[KILLS]
+
+    def nukage_bite(self):
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        if not s.descend():
+            return 0, 99
+        s.go(40)
+        for i in range(6):
+            s.p[AC_LIVE + i] = 0
+        # the channel spans (6,5)-(19,5) in THE RED CISTERN's attr plane
+        s.p[PX_HI], s.p[PX_LO] = 10, 0x80
+        s.p[PY_HI], s.p[PY_LO] = 5, 0x80
+        h0 = s.m()[HEALTH]
+        s.go(250)
+        h1 = s.m()[HEALTH]
+        s.p[PY_HI] = 8                          # step out
+        s.go(250)
+        h2 = s.m()[HEALTH]
+        return h0 - h1, h1 - h2
 
     def fireball_footprint(self):
         import metrics as M
