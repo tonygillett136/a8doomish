@@ -77,6 +77,13 @@ FADR_LO = RAMTAB+256
 FADR_HI = RAMTAB+320
 COLHI   = RAMTAB+384
 COLDIST = RAMTAB+448            ; 40: per-column wall dist (sprite depth test)
+; Buffer B's wall dispatch gets its OWN table rather than buffer A's plus a
+; fixed $0800. That constraint -- ladder B must live exactly 2 KB above ladder
+; A -- is what blocks per-distance ladder variants: no pair of free regions in
+; this memory map is $0800 apart. Two tables cost 98 bytes of RAMTAB (which has
+; 536 spare) and let the variants live anywhere there is room.
+WADRB_LO = RAMTAB+512
+WADRB_HI = RAMTAB+576
 
 ; ---- zero page -------------------------------------------------------------
         org $0080
@@ -210,6 +217,9 @@ flip_buffers
         sta backbuf
         lda #LADOFS             ; next frame draws into B
         sta bufhi
+        lda #>WADRB_LO          ; ...and the wall dispatch reads B's table
+        sta _jwlo+2
+        sta _jwhi+2
         lda #$10
         sta bufpg
         rts
@@ -222,6 +232,9 @@ _fl_b
         sta backbuf
         sta bufhi
         sta bufpg
+        lda #>WADR_LO           ; back to buffer A's table
+        sta _jwlo+2
+        sta _jwhi+2
         rts
 
 ; ============================================================================
@@ -505,13 +518,11 @@ _jf     jsr $FFFF   ; floor ladder carries its own gradient
 
         ldy ktop
 _nocap
-        lda WADR_LO,y
-        sta _jw+1
-        lda WADR_HI,y
-        clc
-        adc bufhi
-        sta _jw+2
-        lda wlum
+_jwlo   lda WADR_LO,y           ; operand HIGH BYTE patched at each buffer flip
+        sta _jw+1               ; ($30 = buffer A's table, $32 = buffer B's).
+_jwhi   lda WADR_HI,y           ; Two bytes per frame instead of an add per
+        sta _jw+2               ; column: 160 cycles a frame CHEAPER than the
+        lda wlum                ; clc/adc bufhi it replaces.
 _jw     jsr $FFFF
 
         inc col
@@ -641,17 +652,90 @@ init_player                     ; spawn per THE VESTIBULE's level header
         rts
 
 ; ============================================================================
+; ---------------------------------------------------------------------------
+; _wband -- fill WADR/WADRB for one distance band.
+;   t0/t1 = this band's ladder base in buffer A, m0/m1 = the same in buffer B,
+;   X = first ktop, A = one past the last. Y walks the band from slot 0, so
+;   entry offset (ktop - first)*8 comes straight out of WOFF.
+_wband
+        sta m2
+        ldy #0
+_wb_l   lda WOFF_LO,y
+        clc
+        adc t0
+        sta WADR_LO,x
+        lda WOFF_HI,y
+        adc t1
+        sta WADR_HI,x
+        lda WOFF_LO,y
+        clc
+        adc m0
+        sta WADRB_LO,x
+        lda WOFF_HI,y
+        adc m1
+        sta WADRB_HI,x
+        iny
+        inx
+        cpx m2
+        bne _wb_l
+        rts
+
 build_ramtabs
+        ; ---- wall dispatch: four distance bands, four ladder variants ------
+        ; ktop 0-11 -> LADW  (course pitch 12, walls that fill the screen)
+        ; ktop 12-23 -> LADW1 (pitch 8)
+        ; ktop 24-35 -> LADW2 (pitch 5)
+        ; ktop 36-48 -> LADW3 (pitch 3, the far walls; ktop 48 lands on its rts)
+        ; Measured, ktop runs 16 at two cells to 43 at ten, so this spans the
+        ; whole useful range. The selection is free: the table it writes is the
+        ; one the renderer already indexes by ktop.
+        ldx #<LADW_A
+        ldy #>LADW_A
+        lda #<LADW_B
+        sta m0
+        lda #>LADW_B
+        sta m1
+        stx t0
+        sty t1
+        ldx #0
+        lda #12
+        jsr _wband
+        ldx #<LADW1_A
+        ldy #>LADW1_A
+        stx t0
+        sty t1
+        lda #<LADW1_B
+        sta m0
+        lda #>LADW1_B
+        sta m1
+        ldx #12
+        lda #24
+        jsr _wband
+        ldx #<LADW2_A
+        ldy #>LADW2_A
+        stx t0
+        sty t1
+        lda #<LADW2_B
+        sta m0
+        lda #>LADW2_B
+        sta m1
+        ldx #24
+        lda #36
+        jsr _wband
+        ldx #<LADW3_A
+        ldy #>LADW3_A
+        stx t0
+        sty t1
+        lda #<LADW3_B
+        sta m0
+        lda #>LADW3_B
+        sta m1
+        ldx #36
+        lda #49
+        jsr _wband
+
         ldx #0
 _brw
-        lda WOFF_LO,x
-        clc
-        adc #<LADW_A
-        sta WADR_LO,x
-        lda WOFF_HI,x
-        adc #>LADW_A
-        sta WADR_HI,x
-
         lda RFOFF_LO,x
         clc
         adc #<LADR_A

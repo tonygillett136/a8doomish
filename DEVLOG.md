@@ -1923,3 +1923,62 @@ kill tally. A tail call into the VBI-safe hud_num, three bytes of string
 change, and the check that verifies the counter now also reads the digits
 straight out of the text row, because a number that is counted but never shown
 is a debug variable, not a feature. 64/64.
+
+## The non-scaling wall pattern, spotted from outside
+
+Angelo Colucci, shown the game with no access to any of this, wrote: *"The
+non-scaling wall pattern is slightly off, but apart from that, it's impressive.
+Decent frame rate too!"* — and put his finger on the exact top item of the
+project's own "what is still true" list, from a screenshot, cold. The best
+possible validation of an honest limitations section, and of the fresh-eyes
+principle: he had never read the list he was reproducing.
+
+Measured first, as always. The masonry courses were one dark row in four at a
+FIXED screen pitch — and a wall two cells away rendered *byte-identically* to
+one five cells away in the hue band. Meanwhile ktop (the wall's top row) runs
+16 at two cells to 43 at ten: the wall's height varies sixfold across the useful
+range while its bricks did not vary at all.
+
+The irony worth stating: **the flaw and the frame rate are the same decision.**
+Courses cost zero cycles because they are baked into straight-line unrolled
+code. Making them scale properly is texture mapping — a multiply and a divide
+per pixel — which is the entire budget that buys the frame rate he complimented.
+
+### Stage 1: a mechanism change with a byte-identical acceptance test
+
+The blocker was that the wall dispatch computed `WADR_HI[ktop] + bufhi`, so
+buffer B's ladder had to sit exactly $0800 above buffer A's — and no pair of
+free regions in this memory map is $0800 apart. Buffer B now gets its own
+dispatch table (98 bytes of RAMTAB, which had 536 spare) and the renderer
+switches between them by patching two operand bytes at each buffer flip. That
+is 160 cycles a frame CHEAPER than the add it replaced.
+
+Pure mechanism, so the acceptance test is that **nothing changes**. The gallery
+was the wrong instrument — it walks the game, and the game has randomness, so
+six frames differed for reasons unrelated to the change. A render fingerprint
+was written instead: player parked at 21 fixed viewpoints, every actor removed,
+luminance grid hashed. Same binary, same hash, always. Before and after the
+refactor: **identical**. That is what "behaviour-neutral" has to mean.
+
+### Stage 2: four variants, and the guard law collecting its fourth payment
+
+Four ladder variants, course pitch 12/8/5/3, each holding only the slots its
+distance band can enter at (385/289/193/97 bytes) — selected through the
+dispatch table that was already indexed by ktop, so **the selection costs
+nothing at all**. 1,158 bytes for both buffers.
+
+The first placement put them at $A230, on the authority of a memory-map table
+reading "$A000-$A226 sprite renderer". True when written; the renderer had since
+grown past $A394 as poses and the hulk scale went in. The variants landed on top
+of it and every sprite in the game vanished — four sweep checks failed at once
+and said so precisely. The existing `ert * > $A900` could not see it: it guards
+sprites growing UP into their tables, not something else being dropped in
+underneath. **Guard both sides of every fixed org** — and the corollary this
+adds: *a memory-map document is not a memory-map measurement.* The variants now
+live in the engine tail, measured free from the ENGINE_END symbol, with a guard
+at each end. (The first version of the lower guard tested the live PC, which by
+that point in assembly was wherever ladder set B had ended — an assertion that
+fires on the wrong fact is the same bug as one that never fires.)
+
+Result: pitch 8 rows on a near wall, 5 on a far one, where it was 4 on both.
+65/65, and the property is now its own check.

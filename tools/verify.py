@@ -392,6 +392,16 @@ class Sweep:
         self.chk('nukage bites, and only nukage', hin >= 8 and hout == 0,
                  'lost %d HP in 5s standing in it, %d in 5s beside it' % (hin, hout))
 
+        # Masonry courses must SHRINK with distance. They used to be one dark
+        # row in four at a fixed screen pitch, so a wall two cells away and one
+        # ten cells away had identical brick sizes -- the first thing an outside
+        # reviewer noticed. Four pre-scaled ladder variants, selected through
+        # the dispatch table already indexed by ktop, so the choice costs no
+        # cycles. Measured as the pitch at a near wall versus a far one.
+        near, far = self.course_pitch()
+        self.chk('masonry courses scale with distance', near > far >= 2,
+                 'pitch %d rows near, %d far' % (near, far))
+
         gun = self.weapon_on_every_level()
         self.chk('the gun is drawn on every level', min(gun) >= 80,
                  'outline pixels per level: %s' % gun)
@@ -661,6 +671,49 @@ class Sweep:
         s.p[WONDONE] = 0
         want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
         return before, after if digits == want else -1
+
+    def course_pitch(self):
+        """Course pitch in screen rows at a near wall and a far one.
+
+        Builds its own wall at a known distance, exactly as flat_wall_profile
+        does, because the level's own geometry cannot be relied on to put a
+        flat face at a chosen range.
+        """
+        import metrics as M
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        for i in range(6):
+            s.p[AC_LIVE + i] = 0
+        m = s.m()
+        px, py = m[PX_HI], m[PY_HI]
+        ramp = M.ramp_from_ladders()
+
+        def pitch(D):
+            for dy in range(-12, 13):
+                for dx in range(1, 16):
+                    s.p[MAPBASE + (px + dx) + (py + dy) * 32] = 1 if dx >= D else 0
+            s.p[PX_HI], s.p[PX_LO] = px, 0x80
+            s.p[PY_HI], s.p[PY_LO] = py, 0x80
+            s.p[PANG] = 0
+            s.go(30)
+            L = M.luma(M.grab(s.a))
+            v = [L[r][40] for r in range(96)]
+            wall = [r for r in range(96) if v[r] != ramp.get(r, -1)]
+            if not wall:
+                return 0
+            kt = min(wall)
+            lo, hi = max(30, kt), min(65, 95 - kt)      # the wall's own band
+            if hi - lo < 3:
+                return 0
+            seg = [v[r] for r in range(lo, hi + 1)]
+            dark = [r for r in range(lo, hi + 1) if v[r] == min(seg)]
+            gaps = [dark[i + 1] - dark[i] for i in range(len(dark) - 1)]
+            gaps = [g for g in gaps if g > 1]           # drop the horizon pair
+            return min(gaps) if gaps else 0
+
+        return pitch(2), pitch(4)
 
     def nukage_bite(self):
         s = Sweep(self.xex)

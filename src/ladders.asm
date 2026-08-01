@@ -97,7 +97,7 @@ LADW_A
         lda wlum
         sta SCREEN+30*40,x
         sta SCREEN+65*40,x
-        lda wlum2
+        lda wlum
         sta SCREEN+31*40,x
         sta SCREEN+64*40,x
         lda wlum
@@ -121,7 +121,7 @@ LADW_A
         lda wlum
         sta SCREEN+38*40,x
         sta SCREEN+57*40,x
-        lda wlum2
+        lda wlum
         sta SCREEN+39*40,x
         sta SCREEN+56*40,x
         lda wlum
@@ -133,7 +133,7 @@ LADW_A
         lda wlum
         sta SCREEN+42*40,x
         sta SCREEN+53*40,x
-        lda wlum2
+        lda wlum
         sta SCREEN+43*40,x
         sta SCREEN+52*40,x
         lda wlum
@@ -348,6 +348,7 @@ LADF_A
         sta SCREEN+95*40,x
         rts
 
+
         org $3400
 LADW_B
         lda #$11
@@ -443,7 +444,7 @@ LADW_B
         lda wlum
         sta SCREEN+$1000+30*40,x
         sta SCREEN+$1000+65*40,x
-        lda wlum2
+        lda wlum
         sta SCREEN+$1000+31*40,x
         sta SCREEN+$1000+64*40,x
         lda wlum
@@ -467,7 +468,7 @@ LADW_B
         lda wlum
         sta SCREEN+$1000+38*40,x
         sta SCREEN+$1000+57*40,x
-        lda wlum2
+        lda wlum
         sta SCREEN+$1000+39*40,x
         sta SCREEN+$1000+56*40,x
         lda wlum
@@ -479,7 +480,7 @@ LADW_B
         lda wlum
         sta SCREEN+$1000+42*40,x
         sta SCREEN+$1000+53*40,x
-        lda wlum2
+        lda wlum
         sta SCREEN+$1000+43*40,x
         sta SCREEN+$1000+52*40,x
         lda wlum
@@ -693,3 +694,458 @@ LADF_B
         lda #$DD
         sta SCREEN+$1000+95*40,x
         rts
+
+
+        ert ENGINE_END > $2600, "engine code has grown into the wall ladder variants at $2600"
+        org $2600
+LADW1_A
+        lda #$33
+        sta SCREEN+12*40,x
+        sta SCREEN+83*40,x
+        lda #$33
+        sta SCREEN+13*40,x
+        sta SCREEN+82*40,x
+        lda #$33
+        sta SCREEN+14*40,x
+        sta SCREEN+81*40,x
+        lda #$44
+        sta SCREEN+15*40,x
+        sta SCREEN+80*40,x
+        lda #$44
+        sta SCREEN+16*40,x
+        sta SCREEN+79*40,x
+        lda #$44
+        sta SCREEN+17*40,x
+        sta SCREEN+78*40,x
+        lda #$44
+        sta SCREEN+18*40,x
+        sta SCREEN+77*40,x
+        lda #$44
+        sta SCREEN+19*40,x
+        sta SCREEN+76*40,x
+        lda #$44
+        sta SCREEN+20*40,x
+        sta SCREEN+75*40,x
+        lda #$44
+        sta SCREEN+21*40,x
+        sta SCREEN+74*40,x
+        lda #$44
+        sta SCREEN+22*40,x
+        sta SCREEN+73*40,x
+        lda #$44
+        sta SCREEN+23*40,x
+        sta SCREEN+72*40,x
+        lda #$44
+        sta SCREEN+24*40,x
+        sta SCREEN+71*40,x
+        lda #$33
+        sta SCREEN+25*40,x
+        sta SCREEN+70*40,x
+        lda #$33
+        sta SCREEN+26*40,x
+        sta SCREEN+69*40,x
+        lda #$33
+        sta SCREEN+27*40,x
+        sta SCREEN+68*40,x
+        lda #$33
+        sta SCREEN+28*40,x
+        sta SCREEN+67*40,x
+        lda #$22
+        sta SCREEN+29*40,x
+        sta SCREEN+66*40,x
+        lda wlum
+        sta SCREEN+30*40,x
+        sta SCREEN+65*40,x
+        lda wlum2
+        sta SCREEN+31*40,x
+        sta SCREEN+64*40,x
+        lda wlum
+        sta SCREEN+32*40,x
+        sta SCREEN+63*40,x
+        lda wlum
+        sta SCREEN+33*40,x
+        sta SCREEN+62*40,x
+        lda wlum
+        sta SCREEN+34*40,x
+        sta SCREEN+61*40,x
+        lda wlum
+        sta SCREEN+35*40,x
+        sta SCREEN+60*40,x
+        lda wlum
+        sta SCREEN+36*40,x
+        sta SCREEN+59*40,x
+        lda wlum
+        sta SCREEN+37*40,x
+        sta SCREEN+58*40,x
+        lda wlum
+        sta SCREEN+38*40,x
+        sta SCREEN+57*40,x
+        lda wlum2
+        sta SCREEN+39*40,x
+        sta SCREEN+56*40,x
+        lda wlum
+        sta SCREEN+40*40,x
+        sta SCREEN+55*40,x
+        lda wlum
+        sta SCREEN+41*40,x
+        sta SCREEN+54*40,x
+        lda wlum
+        sta SCREEN+42*40,x
+        sta SCREEN+53*40,x
+        lda wlum
+        sta SCREEN+43*40,x
+        sta SCREEN+52*40,x
+        lda wlum
+        sta SCREEN+44*40,x
+        sta SCREEN+51*40,x
+        lda wlum
+        sta SCREEN+45*40,x
+        sta SCREEN+50*40,x
+        lda wlum
+        sta SCREEN+46*40,x
+        sta SCREEN+49*40,x
+        lda wlum2
+        sta SCREEN+47*40,x
+        sta SCREEN+48*40,x
+        rts
+
+LADW2_A
+        lda #$44
+        sta SCREEN+24*40,x
+        sta SCREEN+71*40,x
+        lda #$33
+        sta SCREEN+25*40,x
+        sta SCREEN+70*40,x
+        lda #$33
+        sta SCREEN+26*40,x
+        sta SCREEN+69*40,x
+        lda #$33
+        sta SCREEN+27*40,x
+        sta SCREEN+68*40,x
+        lda #$33
+        sta SCREEN+28*40,x
+        sta SCREEN+67*40,x
+        lda #$22
+        sta SCREEN+29*40,x
+        sta SCREEN+66*40,x
+        lda wlum
+        sta SCREEN+30*40,x
+        sta SCREEN+65*40,x
+        lda wlum
+        sta SCREEN+31*40,x
+        sta SCREEN+64*40,x
+        lda wlum
+        sta SCREEN+32*40,x
+        sta SCREEN+63*40,x
+        lda wlum
+        sta SCREEN+33*40,x
+        sta SCREEN+62*40,x
+        lda wlum2
+        sta SCREEN+34*40,x
+        sta SCREEN+61*40,x
+        lda wlum
+        sta SCREEN+35*40,x
+        sta SCREEN+60*40,x
+        lda wlum
+        sta SCREEN+36*40,x
+        sta SCREEN+59*40,x
+        lda wlum
+        sta SCREEN+37*40,x
+        sta SCREEN+58*40,x
+        lda wlum
+        sta SCREEN+38*40,x
+        sta SCREEN+57*40,x
+        lda wlum2
+        sta SCREEN+39*40,x
+        sta SCREEN+56*40,x
+        lda wlum
+        sta SCREEN+40*40,x
+        sta SCREEN+55*40,x
+        lda wlum
+        sta SCREEN+41*40,x
+        sta SCREEN+54*40,x
+        lda wlum
+        sta SCREEN+42*40,x
+        sta SCREEN+53*40,x
+        lda wlum
+        sta SCREEN+43*40,x
+        sta SCREEN+52*40,x
+        lda wlum2
+        sta SCREEN+44*40,x
+        sta SCREEN+51*40,x
+        lda wlum
+        sta SCREEN+45*40,x
+        sta SCREEN+50*40,x
+        lda wlum
+        sta SCREEN+46*40,x
+        sta SCREEN+49*40,x
+        lda wlum
+        sta SCREEN+47*40,x
+        sta SCREEN+48*40,x
+        rts
+
+LADW3_A
+        lda wlum
+        sta SCREEN+36*40,x
+        sta SCREEN+59*40,x
+        lda wlum
+        sta SCREEN+37*40,x
+        sta SCREEN+58*40,x
+        lda wlum2
+        sta SCREEN+38*40,x
+        sta SCREEN+57*40,x
+        lda wlum
+        sta SCREEN+39*40,x
+        sta SCREEN+56*40,x
+        lda wlum
+        sta SCREEN+40*40,x
+        sta SCREEN+55*40,x
+        lda wlum2
+        sta SCREEN+41*40,x
+        sta SCREEN+54*40,x
+        lda wlum
+        sta SCREEN+42*40,x
+        sta SCREEN+53*40,x
+        lda wlum
+        sta SCREEN+43*40,x
+        sta SCREEN+52*40,x
+        lda wlum2
+        sta SCREEN+44*40,x
+        sta SCREEN+51*40,x
+        lda wlum
+        sta SCREEN+45*40,x
+        sta SCREEN+50*40,x
+        lda wlum
+        sta SCREEN+46*40,x
+        sta SCREEN+49*40,x
+        lda wlum2
+        sta SCREEN+47*40,x
+        sta SCREEN+48*40,x
+        rts
+
+LADW1_B
+        lda #$33
+        sta SCREEN+$1000+12*40,x
+        sta SCREEN+$1000+83*40,x
+        lda #$33
+        sta SCREEN+$1000+13*40,x
+        sta SCREEN+$1000+82*40,x
+        lda #$33
+        sta SCREEN+$1000+14*40,x
+        sta SCREEN+$1000+81*40,x
+        lda #$44
+        sta SCREEN+$1000+15*40,x
+        sta SCREEN+$1000+80*40,x
+        lda #$44
+        sta SCREEN+$1000+16*40,x
+        sta SCREEN+$1000+79*40,x
+        lda #$44
+        sta SCREEN+$1000+17*40,x
+        sta SCREEN+$1000+78*40,x
+        lda #$44
+        sta SCREEN+$1000+18*40,x
+        sta SCREEN+$1000+77*40,x
+        lda #$44
+        sta SCREEN+$1000+19*40,x
+        sta SCREEN+$1000+76*40,x
+        lda #$44
+        sta SCREEN+$1000+20*40,x
+        sta SCREEN+$1000+75*40,x
+        lda #$44
+        sta SCREEN+$1000+21*40,x
+        sta SCREEN+$1000+74*40,x
+        lda #$44
+        sta SCREEN+$1000+22*40,x
+        sta SCREEN+$1000+73*40,x
+        lda #$44
+        sta SCREEN+$1000+23*40,x
+        sta SCREEN+$1000+72*40,x
+        lda #$44
+        sta SCREEN+$1000+24*40,x
+        sta SCREEN+$1000+71*40,x
+        lda #$33
+        sta SCREEN+$1000+25*40,x
+        sta SCREEN+$1000+70*40,x
+        lda #$33
+        sta SCREEN+$1000+26*40,x
+        sta SCREEN+$1000+69*40,x
+        lda #$33
+        sta SCREEN+$1000+27*40,x
+        sta SCREEN+$1000+68*40,x
+        lda #$33
+        sta SCREEN+$1000+28*40,x
+        sta SCREEN+$1000+67*40,x
+        lda #$22
+        sta SCREEN+$1000+29*40,x
+        sta SCREEN+$1000+66*40,x
+        lda wlum
+        sta SCREEN+$1000+30*40,x
+        sta SCREEN+$1000+65*40,x
+        lda wlum2
+        sta SCREEN+$1000+31*40,x
+        sta SCREEN+$1000+64*40,x
+        lda wlum
+        sta SCREEN+$1000+32*40,x
+        sta SCREEN+$1000+63*40,x
+        lda wlum
+        sta SCREEN+$1000+33*40,x
+        sta SCREEN+$1000+62*40,x
+        lda wlum
+        sta SCREEN+$1000+34*40,x
+        sta SCREEN+$1000+61*40,x
+        lda wlum
+        sta SCREEN+$1000+35*40,x
+        sta SCREEN+$1000+60*40,x
+        lda wlum
+        sta SCREEN+$1000+36*40,x
+        sta SCREEN+$1000+59*40,x
+        lda wlum
+        sta SCREEN+$1000+37*40,x
+        sta SCREEN+$1000+58*40,x
+        lda wlum
+        sta SCREEN+$1000+38*40,x
+        sta SCREEN+$1000+57*40,x
+        lda wlum2
+        sta SCREEN+$1000+39*40,x
+        sta SCREEN+$1000+56*40,x
+        lda wlum
+        sta SCREEN+$1000+40*40,x
+        sta SCREEN+$1000+55*40,x
+        lda wlum
+        sta SCREEN+$1000+41*40,x
+        sta SCREEN+$1000+54*40,x
+        lda wlum
+        sta SCREEN+$1000+42*40,x
+        sta SCREEN+$1000+53*40,x
+        lda wlum
+        sta SCREEN+$1000+43*40,x
+        sta SCREEN+$1000+52*40,x
+        lda wlum
+        sta SCREEN+$1000+44*40,x
+        sta SCREEN+$1000+51*40,x
+        lda wlum
+        sta SCREEN+$1000+45*40,x
+        sta SCREEN+$1000+50*40,x
+        lda wlum
+        sta SCREEN+$1000+46*40,x
+        sta SCREEN+$1000+49*40,x
+        lda wlum2
+        sta SCREEN+$1000+47*40,x
+        sta SCREEN+$1000+48*40,x
+        rts
+
+LADW2_B
+        lda #$44
+        sta SCREEN+$1000+24*40,x
+        sta SCREEN+$1000+71*40,x
+        lda #$33
+        sta SCREEN+$1000+25*40,x
+        sta SCREEN+$1000+70*40,x
+        lda #$33
+        sta SCREEN+$1000+26*40,x
+        sta SCREEN+$1000+69*40,x
+        lda #$33
+        sta SCREEN+$1000+27*40,x
+        sta SCREEN+$1000+68*40,x
+        lda #$33
+        sta SCREEN+$1000+28*40,x
+        sta SCREEN+$1000+67*40,x
+        lda #$22
+        sta SCREEN+$1000+29*40,x
+        sta SCREEN+$1000+66*40,x
+        lda wlum
+        sta SCREEN+$1000+30*40,x
+        sta SCREEN+$1000+65*40,x
+        lda wlum
+        sta SCREEN+$1000+31*40,x
+        sta SCREEN+$1000+64*40,x
+        lda wlum
+        sta SCREEN+$1000+32*40,x
+        sta SCREEN+$1000+63*40,x
+        lda wlum
+        sta SCREEN+$1000+33*40,x
+        sta SCREEN+$1000+62*40,x
+        lda wlum2
+        sta SCREEN+$1000+34*40,x
+        sta SCREEN+$1000+61*40,x
+        lda wlum
+        sta SCREEN+$1000+35*40,x
+        sta SCREEN+$1000+60*40,x
+        lda wlum
+        sta SCREEN+$1000+36*40,x
+        sta SCREEN+$1000+59*40,x
+        lda wlum
+        sta SCREEN+$1000+37*40,x
+        sta SCREEN+$1000+58*40,x
+        lda wlum
+        sta SCREEN+$1000+38*40,x
+        sta SCREEN+$1000+57*40,x
+        lda wlum2
+        sta SCREEN+$1000+39*40,x
+        sta SCREEN+$1000+56*40,x
+        lda wlum
+        sta SCREEN+$1000+40*40,x
+        sta SCREEN+$1000+55*40,x
+        lda wlum
+        sta SCREEN+$1000+41*40,x
+        sta SCREEN+$1000+54*40,x
+        lda wlum
+        sta SCREEN+$1000+42*40,x
+        sta SCREEN+$1000+53*40,x
+        lda wlum
+        sta SCREEN+$1000+43*40,x
+        sta SCREEN+$1000+52*40,x
+        lda wlum2
+        sta SCREEN+$1000+44*40,x
+        sta SCREEN+$1000+51*40,x
+        lda wlum
+        sta SCREEN+$1000+45*40,x
+        sta SCREEN+$1000+50*40,x
+        lda wlum
+        sta SCREEN+$1000+46*40,x
+        sta SCREEN+$1000+49*40,x
+        lda wlum
+        sta SCREEN+$1000+47*40,x
+        sta SCREEN+$1000+48*40,x
+        rts
+
+LADW3_B
+        lda wlum
+        sta SCREEN+$1000+36*40,x
+        sta SCREEN+$1000+59*40,x
+        lda wlum
+        sta SCREEN+$1000+37*40,x
+        sta SCREEN+$1000+58*40,x
+        lda wlum2
+        sta SCREEN+$1000+38*40,x
+        sta SCREEN+$1000+57*40,x
+        lda wlum
+        sta SCREEN+$1000+39*40,x
+        sta SCREEN+$1000+56*40,x
+        lda wlum
+        sta SCREEN+$1000+40*40,x
+        sta SCREEN+$1000+55*40,x
+        lda wlum2
+        sta SCREEN+$1000+41*40,x
+        sta SCREEN+$1000+54*40,x
+        lda wlum
+        sta SCREEN+$1000+42*40,x
+        sta SCREEN+$1000+53*40,x
+        lda wlum
+        sta SCREEN+$1000+43*40,x
+        sta SCREEN+$1000+52*40,x
+        lda wlum2
+        sta SCREEN+$1000+44*40,x
+        sta SCREEN+$1000+51*40,x
+        lda wlum
+        sta SCREEN+$1000+45*40,x
+        sta SCREEN+$1000+50*40,x
+        lda wlum
+        sta SCREEN+$1000+46*40,x
+        sta SCREEN+$1000+49*40,x
+        lda wlum2
+        sta SCREEN+$1000+47*40,x
+        sta SCREEN+$1000+48*40,x
+        rts
+
+        ert * > $2B40, "wall ladder variants have grown into the item table at $2B40"
