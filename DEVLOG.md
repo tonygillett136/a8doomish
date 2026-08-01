@@ -1856,3 +1856,24 @@ none proved they could fight or die. And the ultracode point, measured: the
 scout cost 169k tokens of parallel reading and caught in minutes what sixty
 green checks could not see at all, because it read for *references*, not for
 symptoms.
+
+## The juice sprint: hits you can feel
+
+Second ultracode burst of the morning, same shape as the first: scouts out on
+the fact-questions (how are fireballs actually drawn? does anything author the
+hurt bit?), the main thread implementing what depends on neither.
+
+**Knockback.** A hit you only read about on the health counter is a hit you did
+not feel. `push_player` sets the player's velocity to 1.5× their own top speed,
+directly away from whichever slot did the damage — the melee claw uses the
+attacker's position, a fireball uses its own, since the ball IS the impact
+point. Setting rather than adding means two hits in one tick cannot launch the
+player; the friction model turns the impulse into a sharp jolt that decays over
+about three ticks; and move_player's collision keeps it from shoving anyone
+through a wall. Plus the gun now jolts (`wkick`) when YOU are hit, not only
+when you fire — same path, same decay, four bytes.
+
+Proven live before the sweep: a hulk claw took health 100→84 (the per-type 16
+landing in play) and left velocity at exactly $FFA0 — the −KNOCK impulse,
+pointing away. The sweep gained "a hit shoves the player": impulse ≥ $60
+against a top speed of $40, measured the frame the health drop lands.

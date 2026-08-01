@@ -173,6 +173,8 @@ _notdead
         bcs _nopain
         lda #6
         sta painfl
+        lda #5                  ; the gun jolts when YOU are hit, not only when
+        sta wkick               ; you fire -- same kick path, same decay
         lda #SND_PAIN
         jsr audio_play
 _nopain

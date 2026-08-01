@@ -239,6 +239,45 @@ _ie_no  lda #1                  ; Z=0
         rts
 
 ; ---------------------------------------------------------------------------
+; push_player: X = the slot that just hurt the player -- shove the player away
+; from it. A hit you only read about on the health counter is a hit you did
+; not FEEL; a shove you have to steer back from is. Sets velocity rather than
+; adding, so two hits in one tick cannot launch the player; the friction model
+; (v = v>>1 + a) turns it into a sharp jolt that decays over ~3 ticks, and
+; move_player's own collision keeps it from pushing anyone through a wall.
+; Runs on the render tick (actors_update), never the VBI. Clobbers A only.
+KNOCK   = $60                   ; 8.8: 1.5x the player's own top speed
+push_player
+        lda px_hi
+        cmp AC_XHI,x
+        beq _pp_y               ; same column: no x component
+        bcs _pp_xe
+        lda #<-KNOCK            ; attacker is east: push west
+        sta vx_lo
+        lda #$FF
+        sta vx_hi
+        bne _pp_y
+_pp_xe  lda #KNOCK
+        sta vx_lo
+        lda #0
+        sta vx_hi
+_pp_y   lda py_hi
+        cmp AC_YHI,x
+        beq _pp_done
+        bcs _pp_ys
+        lda #<-KNOCK
+        sta vy_lo
+        lda #$FF
+        sta vy_hi
+        bne _pp_done
+_pp_ys  lda #KNOCK
+        sta vy_lo
+        lda #0
+        sta vy_hi
+_pp_done
+        rts
+
+; ---------------------------------------------------------------------------
 ; spawn_husk: A = cell x, Y = cell y.  Uses the first free slot in 0..5.
 spawn_husk
         sta ai_t0
@@ -565,6 +604,7 @@ ht_melee
         bcs ht_mel1
         lda #0
 ht_mel1 sta ai_ph
+        jsr push_player         ; a claw you can FEEL: X is the attacker
         inc DBG_MELEE
 ht_mel_miss
         lda #ST_RECOVER
@@ -1324,6 +1364,7 @@ bt_hitp
         bcs bt_p1
         lda #0
 bt_p1   sta ai_ph
+        jsr push_player         ; X = the ball, which IS the impact point
         inc DBG_PHIT
         jmp bt_kill
 

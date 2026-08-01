@@ -367,6 +367,13 @@ class Sweep:
         self.chk('kills are counted', kb == 0 and ka == 1,
                  'kills %d -> %d over one point-blank shot' % (kb, ka))
 
+        # A hit must SHOVE. The knockback sets velocity to 1.5x the player's
+        # own top speed, away from the attacker; measured as the signed
+        # velocity the frame the health drop lands.
+        kv = self.knockback_speed()
+        self.chk('a hit shoves the player', kv >= 0x60,
+                 'impulse magnitude $%02X (top speed is $40)' % kv)
+
         gun = self.weapon_on_every_level()
         self.chk('the gun is drawn on every level', min(gun) >= 80,
                  'outline pixels per level: %s' % gun)
@@ -627,6 +634,34 @@ class Sweep:
         s.pull_trigger()
         s.go(30)
         return before, s.m()[KILLS]
+
+    def knockback_speed(self):
+        VX_LO, VX_HI, VY_LO, VY_HI = 0xB0, 0xB1, 0xB2, 0xB3
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        m = s.m()
+        for i in range(1, 6):
+            s.p[AC_LIVE + i] = 0
+        for ad, v in ((AC_XHI, m[PX_HI] + 1), (AC_XLO, 0x80),
+                      (AC_YHI, m[PY_HI]), (AC_YLO, 0x80),
+                      (AC_LIVE, 1), (AC_STATE, 1), (AC_HP, 250)):
+            s.p[ad] = v
+        s.p[AC_TYPE] = 5
+        h0 = s.m()[HEALTH]
+        for _ in range(400):
+            s.p[AC_HP] = 250
+            s.a.frame(1)
+            if s.m()[HEALTH] < h0:
+                break
+        m = s.m()
+
+        def mag(lo, hi):
+            v = m[lo] | (m[hi] << 8)
+            return (0x10000 - v) & 0xFFFF if v & 0x8000 else v
+
+        return max(mag(VX_LO, VX_HI), mag(VY_LO, VY_HI))
 
     def weapon_on_every_level(self):
         """Outline pixels of the held weapon, one count per level.
