@@ -86,6 +86,10 @@ vbi_handler
         sta VDSLST              ; slipped DLI would otherwise desync it forever
         lda #>dli_1
         sta VDSLST+1
+        jsr apply_seam          ; move the hue seam, if the last render asked.
+                                ; Here and nowhere else: no scanline is being
+                                ; drawn, so the DLI chain cannot be caught
+                                ; half-patched.
         lda PORTA
         and #$0F                ; joystick 0 = low nibble, 0 = pressed
         sta inp

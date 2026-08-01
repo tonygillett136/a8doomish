@@ -85,6 +85,12 @@ COLDIST = RAMTAB+448            ; 40: per-column wall dist (sprite depth test)
 WADRB_LO = RAMTAB+512
 WADRB_HI = RAMTAB+576
 
+; How many columns want each wall-top row. The hue seam is placed at the MEDIAN
+; ktop (see seam_calc), and a 48-bucket tally is the cheapest way to find it:
+; HTAB clamps ktop to 0..47, so this is exactly wide enough.
+KHIST   = RAMTAB+640
+        ert KHIST+48 > $3400, "KHIST has grown into ladder set B at $3400"
+
 ; ---- zero page -------------------------------------------------------------
         org $0080
 px_lo   .ds 1
@@ -136,6 +142,17 @@ dist0   .ds 1                   ; the TRUE distance. `dist` gets the light and
                                 ; brightly the level designer lit it and what
                                 ; stone it was made of, and drew every wall in
                                 ; the game at about a quarter of its size.
+seamdl  .ds 1                   ; buffer row currently carrying the wall-band DLI
+seampd  .ds 1                   ; seam the last render WANTS, +1 so 0 = nothing
+                                ; pending. Applied by the VBI, never here: the
+                                ; renderer would be patching a display list ANTIC
+                                ; is part-way through, and a cleared interrupt
+                                ; bit the beam has already passed desyncs the
+                                ; whole DLI chain for that frame -- the status
+                                ; band would flash the floor's hue.
+smp     .ds 2                   ; VBI-private. It must not borrow tmpp or t0/t1:
+                                ; the renderer is mid-column when the VBI fires.
+        ert * > $B0, "main.asm zero page has grown into game.asm's block at $B0"
 
 ; ============================================================================
         org $2000
@@ -151,6 +168,10 @@ start
 
         jsr build_ramtabs
         jsr build_dlist
+        lda #29                 ; where build_dlist plants the wall-band DLI;
+        sta seamdl              ; seam_calc moves it from here
+        lda #0
+        sta seampd
         jsr clear_screen
         jsr init_player
 
@@ -241,8 +262,12 @@ _fl_b
 
 ; ============================================================================
 render_view
+        ldx #47                 ; the wall-top tally, cleared per render
         lda #0
-        sta col
+_rvclr  sta KHIST,x
+        dex
+        bpl _rvclr
+        sta col                 ; A is still 0
 
 _colloop
         ldx col
@@ -495,6 +520,8 @@ _hlook                          ; light/material-biased shading index
         lda dist0
         ldx col
         sta COLDIST,x           ; depth buffer for the sprite pass
+        ldx ktop                ; tally this column's wall top; X is reloaded
+        inc KHIST,x             ; from `col` immediately below, so it is free
 
         ; ============ paint: ceiling, floor, wall ============
         ldx col                 ; every ladder indexes on X
@@ -586,7 +613,7 @@ _nomort
         beq _done
         jmp _colloop
 _done
-        rts
+        jmp seam_calc           ; tail call: place the hue seam for this frame
 
 ; --- t1:t0 (8.8 cells) -> dist index in 1/16-cell units, clamped ----------
 quantise
@@ -778,6 +805,143 @@ _bch
         rts
 
 ; ============================================================================
+; ============================================================================
+; The hue seam.
+;
+; GTIA mode 9 gives ONE hue per scanline, from COLBK, so a scanline holding both
+; wall and ceiling has to pick one. That is a hard limit of the mode. What is
+; NOT fixed is where the picking happens: the seams were hard-coded at rows 30
+; and 65, and a wall two cells away spans rows 16..79, so 44% of it was painted
+; in the ceiling's and floor's hues.
+;
+; A column shows wall at row r (above the horizon) exactly when ktop <= r, so
+; the number of columns showing wall is MONOTONE in r and the majority flips
+; exactly once. The best seam is therefore the MEDIAN ktop -- no extra DLIs,
+; just a different row -- and the display list's length never changes, so this
+; carries none of the 248-scanline risk that rolled the picture on run 2.
+;
+; seam_calc runs at the end of each render; the VBI applies it (see seampd).
+; ============================================================================
+seam_calc
+        ldx #0
+        lda #0
+_sc_scan
+        clc
+        adc KHIST,x
+        cmp #20                 ; half of the 40 ray columns
+        bcs _sc_got
+        inx
+        cpx #48
+        bcc _sc_scan
+        ldx #47                 ; no wall in view at all: seam to the horizon
+_sc_got
+        cpx #1                  ; X = median ktop = where the wall band starts.
+        bcs _sc_lo              ; Clamp so the DLI row below stays >= 0 and the
+        ldx #1                  ; two seams never collide with each other or
+_sc_lo  cpx #48                 ; with the status handover on row 95.
+        bcc _sc_hi
+        ldx #47
+_sc_hi  dex                     ; X = the DLI row: one BEFORE the band, because
+        txa                     ; ANTIC runs the handler at the END of the line
+        sec                     ; carrying the bit
+        sbc seamdl
+        bcs _sc_abs
+        eor #$FF
+        clc
+        adc #1
+_sc_abs cmp #2                  ; deadband: without it a one-row wobble would
+        bcc _sc_no              ; pump the seam every render as you walk
+        inx                     ; +1, so that 0 can mean "nothing pending"
+        stx seampd
+_sc_no  rts
+
+; --- called from the VBI, where no scanline is being drawn ------------------
+apply_seam
+        lda seampd
+        beq _as_rts
+        pha
+        lda seamdl              ; lift the old pair...
+        jsr seam_clr
+        lda #94
+        sec
+        sbc seamdl
+        jsr seam_clr
+        pla
+        sec
+        sbc #1
+        sta seamdl              ; ...and plant the new one
+        jsr seam_set
+        lda #94                 ; the floor seam mirrors the wall seam: the wall
+        sec                     ; spans rows top..95-top, so its last row is
+        sbc seamdl              ; 95-(seamdl+1)
+        jsr seam_set
+        lda #0
+        sta seampd
+_as_rts rts
+
+seam_set                        ; A = buffer row: set its DLI bit in BOTH lists
+        jsr seam_addr
+        ldy #0
+        lda (smp),y
+        ora #$80
+        sta (smp),y
+        jsr seam_other
+        lda (smp),y
+        ora #$80
+        sta (smp),y
+        rts
+
+seam_clr
+        jsr seam_addr
+        ldy #0
+        lda (smp),y
+        and #$7F
+        sta (smp),y
+        jsr seam_other
+        lda (smp),y
+        and #$7F
+        sta (smp),y
+        rts
+
+seam_other                      ; same offset in DLISTB, which is $0400 higher
+        lda smp+1
+        clc
+        adc #4
+        sta smp+1
+        ldy #0
+        rts
+
+; A = buffer row -> smp points at that row's mode byte in DLIST. The list is
+; three $70s then six bytes a row, and the DLI belongs on the SECOND copy of
+; the row, so the offset is 6 + 6*row.
+seam_addr
+        sta smp
+        lda #0
+        sta smp+1
+        asl smp
+        rol smp+1               ; 2*row
+        lda smp+1
+        pha
+        lda smp
+        pha
+        asl smp
+        rol smp+1               ; 4*row
+        pla
+        clc
+        adc smp
+        sta smp
+        pla
+        adc smp+1
+        sta smp+1               ; 6*row
+        lda smp
+        clc
+        adc #<[DLIST+6]
+        sta smp
+        lda smp+1
+        adc #>[DLIST+6]
+        sta smp+1
+        rts
+
 build_dlist                     ; build both display lists, one per buffer
         lda #<DLIST
         sta tmpp

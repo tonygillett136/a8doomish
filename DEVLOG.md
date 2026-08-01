@@ -2063,3 +2063,112 @@ change the code that just changed.
   it a test rather than a description.
 
 **66/66**, byte-identical across rebuilds.
+
+---
+
+## The hue seam follows the walls (v1.6)
+
+Tony, having looked at v1.5: *"the colour for the ceiling/floor colour the walls,
+as you move closer to them. Is it feasible to have the wall colour very
+specifically apply to the walls?"*
+
+Half of it is a hard limit and half of it was a constant nobody had questioned.
+
+### What cannot be done
+
+GTIA mode 9 gives **one hue per scanline**, from `COLBK`. A scanline holding both
+wall and ceiling has to pick one, and no amount of cleverness changes that. Two
+hues on one line means cycle-exact mid-scanline `COLBK` writes at positions that
+differ per line and change every frame — a full-time kernel that would eat the
+whole CPU with nothing left to render. ANTIC mode E buys genuinely independent
+colours per pixel at the same 40 bytes a row, but only four of them and no
+luminance ramp, and the ramp is what every bit of the distance shading, per-cell
+lighting and material bias is *encoded in*. That is not a tweak, it is a
+different and flatter-looking game.
+
+### What could
+
+The seams were nailed down: `WBAND_TOP = 30` in the generator, and `build_dlist`
+planting the interrupt bits at rows 29 and 65 for the life of the program. A wall
+two cells away spans rows 16..79, so **44% of it was painted in the ceiling's and
+floor's hues** — measured on the pixels, by hue, not inferred.
+
+A column shows wall at row *r* above the horizon exactly when `ktop <= r`. So the
+number of columns showing wall is **monotone** in *r*, the majority flips exactly
+once, and the best seam is simply the **median `ktop`**. No extra DLIs, no change
+to the list's length — which matters, because an overlong display list is what
+rolled the picture on hardware run 2. A 48-bucket tally (`HTAB` clamps `ktop` to
+0..47, so that is exactly wide enough), one `inc` per column, and a scan to the
+halfway point.
+
+Measured, wall pixels carrying the wall's own hue:
+
+| | fixed seams 30/65 | seam = median ktop |
+|---|---|---|
+| wall head-on, 2 cells | 56.1% | **99.5%** |
+| wall head-on, 3 cells | 92.3% | **100%** |
+| corridor, looking along | 53.7% | **79.0%** |
+
+and in the other direction, ceiling and floor pixels stolen by the wall band at 4
+and 6 cells: **640 and 1,440 → zero**. The corridor is a trade, not a win — its
+ceiling/floor error rises from 308 to 972 px, because the two side walls disagree
+about where the seam belongs. Looked at side by side it is still plainly better:
+the mis-hued ceiling sits near the horizon where the ramp is dark and one dark
+hue reads much like another, while a teal band across the top of a wall two cells
+away is the thing you actually see.
+
+**+214 bytes, 10.5 → 10.2 fps.**
+
+### The VBI applies it, and that is not fussiness
+
+`seam_calc` runs at the end of a render but only *records* what it wants. The VBI
+moves the bits. Patch a display list ANTIC is part-way through and a cleared
+interrupt bit the beam has already passed means `dli_1` never fires that frame:
+the chain runs one handler short, and the status band takes the floor's hue for a
+frame. Rare, brief, and a flash on a CRT. At vertical blank there is no beam and
+the question does not arise.
+
+There is no slew limiting. The seam moves in steps of at least two rows (a
+deadband, or a one-row wobble would pump it every render), and over 140 ticks of
+walking, **0 of its 28 moves reversed direction**. The large jumps are real scene
+changes — a wall leaving the view — where snapping is correct and slewing would
+show as a colour band crawling up the screen.
+
+### A negative result: the dark caps stay
+
+`wallcap()` darkens wall rows outside the band, and its stated purpose was to
+disguise the hue mismatch this change removes. So the obvious follow-on was to
+delete it and let near walls run at full luminance to their top edge.
+
+Built it. Head-on it is richer but flat — the vignette was reading as a wall
+falling out of the light. In a **corridor it is much worse**: the ceiling vault's
+stepped silhouette disappears completely. Above the seam, ceiling and wall now
+share a hue, so luminance is the *only* thing separating them, which is precisely
+what the function's own comment warned about — "it has to stay BELOW the ramp it
+sits against, or the wall's own silhouette disappears." Correct hue made the cap
+*more* necessary, not less. Reverted, byte-identical.
+
+(And the first attempt at that experiment measured nothing at all: `build.sh`
+deliberately does not run `gentables.py`, so the rebuild contained the old
+ladder. [[generated-files-are-caches]] collecting again, on the very session that
+wrote the rule down.)
+
+### The occlusion check was a false positive
+
+`sprites occlude behind walls` failed at 4 px. It was not this change, and it was
+not the renderer.
+
+The check differenced two whole frames — husk placed, husk absent — and called
+every changed pixel a husk drawn through a wall. Measured: the husk's billboard
+occupies **columns 36-43**; the offending pixels were at **columns 2-13**. They
+were never husk pixels. The two runs sit at different points in the double-buffer
+cycle, so a handful of pixels can differ anywhere; this change shifted the frame
+timing just enough to land on it. **The shipped v1.5 binary fails the old form of
+the check too**, at other frame counts, with a dormant husk that cannot move.
+
+It now counts only differences *inside the husk's own footprint*, measured from
+the no-wall pass. Proved it still fires: with the wall removed it reports 70 of 70
+pixels visible and fails, so it detects husk pixels rather than having been
+softened into always passing.
+
+**67/67**, byte-identical across rebuilds.

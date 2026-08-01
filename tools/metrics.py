@@ -22,7 +22,11 @@ VIEW_COLS = 80                  # mode 9 pixels across the normal playfield
 X0 = 32                         # normal playfield starts here in the 384 buffer
 XSCALE = 4                      # ...at four screen pixels per logical pixel
 
-CEIL = range(0, 30)             # hue bands, set by the DLI chain
+# Nominal sampling regions, NOT the hue bands. The DLI seams used to sit here
+# permanently; they are now placed per render at the median wall top, so these
+# are just three fixed slices of the picture to compare against each other.
+# Anything that needs the real seam must read the display list.
+CEIL = range(0, 30)
 WALL = range(30, 66)
 FLOOR = range(66, 96)
 

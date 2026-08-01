@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ABYSS — a DOOM-flavoured shooter for the Atari 800XL</title>
-<meta name="description" content="A first-person raycast shooter for a 1983 Atari 800XL. 6502 assembly, 28KB, built in one night. Play it in your browser.">
+<meta name="description" content="A first-person raycast shooter for a 1983 Atari 800XL. 6502 assembly, 29KB, built in one night. Play it in your browser.">
 <meta property="og:title" content="ABYSS — four floors down, no way up">
-<meta property="og:description" content="A DOOM-flavoured raycaster for the Atari 800XL. 28KB of 6502. Play it in your browser.">
+<meta property="og:description" content="A DOOM-flavoured raycaster for the Atari 800XL. 29KB of 6502. Play it in your browser.">
 <meta property="og:image" content="https://abyss.gillett-projects.com/img/03_corridor.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23120a08'/><rect y='12' width='100' height='30' fill='%231a6b73'/><rect y='42' width='100' height='34' fill='%23913c31'/><rect y='76' width='100' height='24' fill='%23a97b2d'/></svg>">
 <style>
@@ -122,7 +122,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <header class="hero">
   <h1>ABYSS</h1>
   <p class="tag">FOUR FLOORS DOWN, NO WAY UP</p>
-  <p class="sub">A DOOM-flavoured first-person shooter for a 1983 Atari 800XL &middot; 6502 assembly &middot; 28 KB &middot; built in one night &middot; runs on the real thing</p>
+  <p class="sub">A DOOM-flavoured first-person shooter for a 1983 Atari 800XL &middot; 6502 assembly &middot; 29 KB &middot; built in one night &middot; runs on the real thing</p>
   <div class="cta">
     <a class="btn primary" href="#play">&#9654;&#xFE0E; PLAY IN YOUR BROWSER</a>
     <a class="btn" href="emu/abyss.xex" download>&#8681;&#xFE0E; GET THE XEX</a>
@@ -133,7 +133,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <section id="play">
   <div class="wrap">
     <h2>PLAY</h2>
-    <p class="lead">This is the real game — byte-for-byte the same 29,143-byte executable that runs
+    <p class="lead">This is the real game — byte-for-byte the same 29,357-byte executable that runs
     on the hardware, here running in an Atari 800XL emulator compiled to WebAssembly. PAL, with
     sound: an audio engine that for most of this game's life was verified only as POKEY register
     traces, never actually heard.</p>
@@ -188,11 +188,11 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
     <p class="lead">An Atari 800XL has a 1.77&nbsp;MHz 6502 and 64&nbsp;KB of RAM.
     A full-screen repaint costs more than a frame. Every part of this is a small measured decision:</p>
     <div class="numbers">
-      <div><b>28&thinsp;KB</b><span>THE WHOLE GAME</span></div>
+      <div><b>29&thinsp;KB</b><span>THE WHOLE GAME</span></div>
       <div><b>5</b><span>CYCLES PER PIXEL</span></div>
-      <div><b>~10.5 fps</b><span>WORLD RENDER</span></div>
+      <div><b>~10.2 fps</b><span>WORLD RENDER</span></div>
       <div><b>50 Hz</b><span>EVERYTHING YOU FEEL</span></div>
-      <div><b>66/66</b><span>ACCEPTANCE CHECKS</span></div>
+      <div><b>67/67</b><span>ACCEPTANCE CHECKS</span></div>
       <div><b>1</b><span>NIGHT TO BUILD</span></div>
     </div>
     <div class="cols" style="margin-top:26px">
@@ -201,7 +201,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
         offset. The entry point <em>is</em> the run length: no loop counter, no compare per pixel,
         no overdraw. Five cycles a pixel is the floor for a 6502, and this sits on it.</p></div>
       <div class="card"><h3>THE 50&thinsp;Hz TRICK</h3>
-        <p>The world redraws at ~10.5 fps, but input, the weapon, the kick, the bob, audio and the
+        <p>The world redraws at ~10.2 fps, but input, the weapon, the kick, the bob, audio and the
         HUD all run in the vertical-blank interrupt at 50&thinsp;Hz and never wait. Pull the trigger and
         the gun fires on the <em>next video frame</em>. The parts you feel are never on the slow path.</p></div>
       <div class="card"><h3>A FLASH THAT CANNOT EXIST</h3>
@@ -241,19 +241,22 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
       recedes with distance — all confirmed on the same CRT, including a renderer change and a
       memory reshuffle, the riskiest edits of the lot.</p>
       <h3>SINCE THEN — NOT YET ON THE CRT.</h3>
-      <p>One change is newer than the last hardware run: the mortar courses now follow the
+      <p>Two changes are newer than the last hardware run. The mortar courses now follow the
       <em>perspective of the wall</em> rather than running parallel to the horizontal, so they
-      converge toward the vanishing point down a corridor. It is measured — 66/66, and a check
-      that reads 11.5 rows from the horizon at the near end of a receding wall against 0.5 at the
-      far end, where the previous build read 0.5 at both. But measured is not the same as seen on
-      a CRT, which is the whole lesson above, so it is flagged here until it has been.</p>
+      converge toward the vanishing point down a corridor — a check reads 11.5 rows from the
+      horizon at the near end of a receding wall against 0.5 at the far end, where the previous
+      build read 0.5 at both. And the <em>hue seam</em> now follows the walls: mode 9 allows only
+      one hue per scanline, but the seams no longer sit at fixed rows, so 99.5% of a near wall
+      carries the wall's own colour instead of 56%. Both are measured — 67/67 — but measured is
+      not the same as seen on a CRT, which is the whole lesson above, so they are flagged here
+      until they have been.</p>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (29,143 bytes)</span>
+    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (29,357 bytes)</span>
     <span>Built by <a href="https://claude.com/claude-code">Claude Code</a> with Tony Gillett.
     Not affiliated with id Software; DOOM is a trademark of id Software LLC.</span>
   </div>

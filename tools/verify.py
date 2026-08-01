@@ -449,6 +449,18 @@ class Sweep:
                  'innermost course %g rows from horizon at the near end, %g at '
                  'the far end, %d distinct offsets' % (nr, fr, nd))
 
+        # A wall must be painted in the WALL's hue. Mode 9 gives one hue per
+        # scanline, so a line holding both wall and ceiling has to pick one --
+        # but the seams were nailed to rows 30 and 65, and a wall two cells away
+        # spans rows 16..79, so 44% of it came out in the ceiling's and floor's
+        # colours and the surface read as three different materials. The seam is
+        # now the median wall top, recomputed per render. Measured on the pixels
+        # themselves, by hue: the shipped v1.5 binary reads 56% here.
+        near, corr = self.wall_hue_fidelity()
+        self.chk('walls are painted in the wall hue', near >= 95 and corr >= 70,
+                 '%.0f%% of a near wall and %.0f%% of a receding one carry the '
+                 'wall hue' % (near, corr))
+
         gun = self.weapon_on_every_level()
         self.chk('the gun is drawn on every level', min(gun) >= 80,
                  'outline pixels per level: %s' % gun)
@@ -718,6 +730,55 @@ class Sweep:
         s.p[WONDONE] = 0
         want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
         return before, after if digits == want else -1
+
+    def wall_hue_fidelity(self):
+        """Percentage of wall pixels actually carrying the wall's hue.
+
+        Two scenes, because they pull in opposite directions: a wall head-on
+        two cells away (the seam should land exactly on it) and a corridor
+        (the side walls disagree about where the seam belongs, so this one can
+        never reach 100 and is not expected to).
+        """
+        import metrics as M
+        out = []
+        for corridor in (False, True):
+            s = Sweep(self.xex)
+            s.a.frame(80)
+            s.pull_trigger()
+            s.a.frame(200)
+            for i in range(6):
+                s.p[AC_LIVE + i] = 0
+            m = s.m()
+            px, py = m[PX_HI], m[PY_HI]
+            if corridor:
+                for dx in range(0, 20):
+                    for dy in range(-3, 4):
+                        s.cell(px + dx, py + dy, 0 if dy == 0 else 1)
+            else:
+                for dy in range(-12, 13):
+                    for dx in range(1, 16):
+                        s.cell(px + dx, py + dy, 1 if dx >= 2 else 0)
+            s.p[PX_HI], s.p[PX_LO] = px, 0x80
+            s.p[PY_HI], s.p[PY_LO] = py, 0x80
+            s.p[PANG] = 0
+            s.go(40)                        # let the seam settle through the VBI
+            hw = s.m()[HWALL] >> 4
+            g = M.grab(s.a)
+            L, H = M.luma(g), M.hue(g)
+            ramp = M.ramp_from_ladders()
+            good = tot = 0
+            for c in range(80):
+                col = [L[r][c] for r in range(96)]
+                kt = next((r for r in range(48)
+                           if col[r] != ramp.get(r, -1)), None)
+                if kt is None:
+                    continue
+                for r in range(kt, 96 - kt):    # the ladder paints kt..95-kt
+                    tot += 1
+                    if H[r][c] == hw:
+                        good += 1
+            out.append(100.0 * good / tot if tot else 0.0)
+        return out[0], out[1]
 
     def mortar_perspective(self):
         """How far the innermost course sits from the horizon, near vs far.
@@ -1144,9 +1205,20 @@ class Sweep:
         return still, max(rows) - min(rows)
 
     def occlusion_pixels(self):
-        """Husk pixels drawn at six cells, with and without a wall at three."""
+        """Husk pixels drawn at six cells, with and without a wall at three.
+
+        Counted INSIDE the husk's own footprint, which is measured from the
+        no-wall pass. Differencing the whole frame and calling every changed
+        pixel a husk was a false positive waiting to happen: the two runs are
+        at different points in the double-buffer cycle, so a handful of pixels
+        can differ far from the sprite. Measured, the husk occupies columns
+        36-43 and the stray differences turned up at columns 2-13 -- and the
+        shipped v1.5 binary fails the old form of this check at some frame
+        counts too, so it was never about the change that exposed it.
+        """
         import metrics as M
         out = []
+        foot = None
         for wall in (False, True):
             frames = []
             for place_husk in (True, False):
@@ -1169,8 +1241,13 @@ class Sweep:
                         s.p[ad] = v
                 s.go(25)
                 frames.append(M.luma(M.grab(s.a)))
-            out.append(sum(1 for r in range(96) for c in range(80)
-                           if frames[0][r][c] != frames[1][r][c]))
+            diff = set((r, c) for r in range(96) for c in range(80)
+                       if frames[0][r][c] != frames[1][r][c])
+            if foot is None:                # no-wall pass: this IS the husk
+                foot = diff
+                out.append(len(diff))
+            else:                           # walled pass: only husk pixels count
+                out.append(len(diff & foot))
         return out[0], out[1]
 
     def slot_order_invariant(self):

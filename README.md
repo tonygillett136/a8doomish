@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>A DOOM-flavoured first-person shooter for a stock Atari 800XL.</b><br>
-  40-column raycaster, 6502 assembly, 28 KB, one night. Runs on the real thing.<br><br>
+  40-column raycaster, 6502 assembly, 29 KB, one night. Runs on the real thing.<br><br>
   <a href="https://abyss.gillett-projects.com"><b>&#9654;&#xFE0E; PLAY IT IN YOUR BROWSER</b></a>
 </p>
 
@@ -14,8 +14,8 @@
   <img src="https://img.shields.io/badge/platform-Atari%20800XL%2FXE-8b1a1a">
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
-  <img src="https://img.shields.io/badge/binary-28%2C723%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-66%2F66-2e7d32">
+  <img src="https://img.shields.io/badge/binary-29%2C357%20bytes-333">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-67%2F67-2e7d32">
 </p>
 
 ---
@@ -89,9 +89,9 @@ Joystick in port 1. **Fire** starts, and fires. That is the whole control scheme
 ## What it does
 
 - **Raycast 3D** in GTIA mode 9 — 80×96 logical over 192 scanlines, 40 ray columns
-- **~10.5 fps** world render, with a **50 Hz feedback layer** that never stalls:
+- **~10.2 fps** world render, with a **50 Hz feedback layer** that never stalls:
   input, weapon, kick, bob, audio and HUD all run in the VBI, decoupled from the
-  renderer. That decoupling is the single thing that makes 10.5 fps feel
+  renderer. That decoupling is the single thing that makes 10.2 fps feel
   deliberate rather than broken.
 - **Momentum movement** — DOOM's friction model, wall sliding, a body radius
 - **A shotgun** with screen kick, range-banded damage, and a muzzle flash that
@@ -200,7 +200,7 @@ Both were one measurement away.
 
 ### 2. The 50 Hz layer is the whole trick
 
-The world redraws at ~10.5 fps. Input, weapon animation, screen kick, weapon bob,
+The world redraws at ~10.2 fps. Input, weapon animation, screen kick, weapon bob,
 audio stepping and the HUD all run in the 50 Hz vertical-blank interrupt and
 never wait for it. Pull the trigger and the gun fires *on the next video frame*,
 with a kick that decays linearly across two world renders. The game feels
@@ -227,7 +227,7 @@ process** — no emulator subprocess, nothing to leave running afterwards.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **66 / 66** |
+| **Acceptance sweep** | **67 / 67** |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | The bestiary, measured | hulk 120→60→0 over exactly two point-blank shots; gunner attacking within 150 frames; hulk 1.23× a husk's height | all sweep checks |
@@ -277,6 +277,16 @@ doesn't.
   running off the bottom-right corner. Six redraws and two attempts at crossing
   the hue seam are all in the DEVLOG with what each one failed at. It is much
   better than it was and it is not solved.
+- **One hue per scanline.** GTIA mode 9 gives 16 luminances per pixel but takes
+  its hue from `COLBK`, which is per-scanline — so a line holding both wall and
+  ceiling must pick one. That part is the mode and cannot be fixed. What *was*
+  fixable: the seams used to sit at rows 30 and 65 permanently, so 44% of a wall
+  two cells away came out in the ceiling's and floor's colours. The seam is now
+  the median wall top, recomputed every render, which puts **99.5%** of a near
+  wall in the wall's own hue (measured by hue, on the pixels). Down a corridor it
+  is a trade rather than a win — 53.7% to 79.0%, at the cost of some ceiling near
+  the horizon taking the wall's hue — because the two side walls disagree about
+  where the seam belongs.
 - ~~Wall courses are locked to screen rows, not depth~~ — **FIXED**, after a
   reviewer spotted it from a screenshot without ever seeing this list. The
   courses are painted per column at fractions of that column's own wall extent,
@@ -294,7 +304,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 66-point acceptance sweep, in process
+python3 tools/verify.py        # 67-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```
