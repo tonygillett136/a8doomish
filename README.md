@@ -37,7 +37,13 @@
 > nothing visible and brings the frame to 232. **Run 3 confirmed both fixes: it
 > boots, locks and plays.**
 >
-> Neither bug was visible to the emulator, for two different reasons: it booted a
+> **Run 4 (v1.4)** confirmed the whole feature chain on the CRT — the bestiary,
+> knockback, hurt floors, the redrawn fireballs and the receding masonry — which
+> matters because v1.4 is the first hardware run to include a RENDERER change
+> and a memory reshuffle into the engine tail, the riskiest edit in the batch.
+> Nothing in this document is emulator-only any more.
+>
+> Neither bring-up bug was visible to the emulator, for two different reasons: it booted a
 > configuration the hardware doesn't, and it renders a fixed 240-line window so it
 > physically cannot show a CRT losing lock. Both are now asserted by the sweep.
 > That is the standing proof that emulator-measured is not the same as true.
@@ -249,9 +255,10 @@ number.
 Stated plainly, because a prototype that oversells itself is worse than one that
 doesn't.
 
-- ~~Never run on real hardware~~ **It runs on real hardware** — see the status
-  note. The two bring-up bugs were both things the emulator cannot observe,
-  which is the most useful thing this project has learned.
+- ~~Never run on real hardware~~ **It runs on real hardware**, and every feature
+  through v1.4 is CRT-confirmed — see the status note. The two bring-up bugs were
+  both things the emulator cannot observe, which is the most useful thing this
+  project has learned.
 - **No keys or locked doors.** The map format supports them and two levels author
   them, so the level compiler compiles locked doors down to plain ones rather
   than ship levels whose exits cannot be reached.
