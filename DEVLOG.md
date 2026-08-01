@@ -1566,7 +1566,7 @@ approach with a known cause is worth more than an untried one.
 
 ## It went to real hardware, and the harness had been testing the wrong machine
 
-Tony ran it on an 800XL from a Lotharek SDIO card. The picture rolled and
+Tony ran it on an 800XL from a Lotharek SIO2SD. The picture rolled and
 corrupted on load.
 
 The cause took one grep. This build puts the sprite renderer at `$A000`, its

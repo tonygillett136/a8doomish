@@ -21,10 +21,10 @@
 ---
 
 > **Status — runs on real hardware.** Confirmed 1 August 2026 on a PAL 800XL
-> via a Lotharek SDIO card, after two bring-up runs each found a bug the
+> via a Lotharek SIO2SD, after two bring-up runs each found a bug the
 > emulator could not see:
 >
-> **Run 1** on a real PAL 800XL (via a Lotharek SDIO card): corrupted on load.
+> **Run 1** on a real PAL 800XL (via a Lotharek SIO2SD): corrupted on load.
 > Three modules live in `$A000–$BFFF`, which is the BASIC ROM on an XL — and the
 > emulator defaults to BASIC *disabled* while the hardware defaults to it
 > *enabled*. Fixed with an INIT segment that clears PORTB bit 1 before those
