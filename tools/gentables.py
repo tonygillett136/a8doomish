@@ -390,8 +390,7 @@ with open(LAD, 'w') as fh:
     # this impossible was removed from the dispatch first.
     #
     # A variant only needs the slots its band can enter at, through to the end.
-    BANDS = [(0, 12), (12, 8), (24, 5), (36, 3)]     # (first slot, pitch)
-    def emit_wall(fh, label, first, pitch, base):
+    def emit_wall(fh, label, first, base):
         for k in range(first, VIEW_H // 2):
             if k < WBAND_TOP:
                 # Slots below the band cap the wall where it leaves its hue
@@ -400,8 +399,13 @@ with open(LAD, 'w') as fh:
             else:
                 # ONE dark row in `pitch`, not two: a 50% square wave reads as
                 # corrugated steel, a single line reads as mortar.
-                src = 'wlum2' if (k % pitch) == pitch - 1 else 'wlum'
-                fh.write('        lda %s\n' % src)
+                # FLAT. The courses used to be baked in here at a fixed
+                # screen pitch, which made them horizontal lines that ignored
+                # the wall's own perspective, and then (v1.4) pre-scaled
+                # variants, which made them the right SIZE but still
+                # horizontal. They are painted per column now, at fractions of
+                # each column's own wall extent, so they follow the surface.
+                fh.write('        lda wlum\n')
             fh.write('        sta %s+%d*40,x\n' % (base, k))
             fh.write('        sta %s+%d*40,x\n' % (base, VIEW_H - 1 - k))
         fh.write('        rts\n\n')
@@ -410,7 +414,7 @@ with open(LAD, 'w') as fh:
         base = 'SCREEN' if tag == 'A' else 'SCREEN+$1000'
         fh.write('\n        org ' + org + '\n')
         fh.write('LADW_' + tag + '\n')
-        emit_wall(fh, 'LADW_' + tag, BANDS[0][0], BANDS[0][1], base)
+        emit_wall(fh, 'LADW_' + tag, 0, base)
         # CEILING: the vertical ramp is baked in as immediates, so the depth
         # gradient costs 2 cycles a row and needs no table fetch.
         fh.write('LADR_' + tag + '\n')
@@ -425,28 +429,6 @@ with open(LAD, 'w') as fh:
             fh.write('        sta %s+%d*40,x\n' % (base, r))
         fh.write('        rts\n\n')
 
-    # Variants 1-3, both buffers, in the free block above the sprite renderer.
-    # They no longer need to sit $0800 apart -- the wall dispatch reads a
-    # per-buffer table now -- so they simply pack.
-    # $2600, NOT $A230. The first attempt put these above the sprite renderer
-    # on the strength of a memory-map table that said "$A000-$A226 sprite
-    # renderer" -- a figure that was true when it was written and had since
-    # grown past $A394 as poses and the hulk scale went in. The variants were
-    # laid straight over the renderer's tail: every sprite in the game vanished,
-    # and the existing `ert * > $A900` could not see it, because it guards
-    # sprites growing UP into their tables, not something else being dropped in
-    # underneath. Guard BOTH sides of every fixed org -- the law, again, and the
-    # fourth time this project has paid to learn it. The engine tail is measured
-    # free (ENGINE_END $2517, item table $2B40) and now carries a guard at each
-    # end.
-    fh.write('\n        ert ENGINE_END > $2600, "engine code has grown into the wall ladder variants at $2600"\n')
-    fh.write('        org $2600\n')
-    for tag in ('A', 'B'):
-        base = 'SCREEN' if tag == 'A' else 'SCREEN+$1000'
-        for vi, (first, pitch) in enumerate(BANDS[1:], start=1):
-            fh.write('LADW%d_%s\n' % (vi, tag))
-            emit_wall(fh, 'LADW%d_%s' % (vi, tag), first, pitch, base)
-    fh.write('        ert * > $2B40, "wall ladder variants have grown into the item table at $2B40"\n')
 print('ladders.asm written')
 print('tables.bin %d bytes' % len(data))
 for name, off, ln in offs:

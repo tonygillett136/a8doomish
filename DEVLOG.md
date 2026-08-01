@@ -1982,3 +1982,84 @@ fires on the wrong fact is the same bug as one that never fires.)
 
 Result: pitch 8 rows on a near wall, 5 on a far one, where it was 4 on both.
 65/65, and the property is now its own check.
+
+---
+
+## Perspective mortar — the courses follow the wall (v1.5)
+
+Angelo Colucci, having seen v1.4: *"The non-scaling wall pattern is slightly
+off, but apart from that, it's impressive."* The scaling was fixed first (above).
+Then Tony asked the better question: **could the mortar lines follow the
+perspective of the walls themselves, rather than being parallel to the
+horizontal?**
+
+They could, and the answer deleted more code than it added.
+
+### Why the variants could never have done it
+
+The four pre-scaled variants scaled the courses correctly and still drew every
+one of them dead level. That is not a bug in them, it is what a suffix ladder
+*is*: it is entered at an offset and runs to the end, so a given byte in the
+ladder always lands on the same screen row no matter where you entered. Pattern
+position is therefore absolute, never relative to the wall. Making it relative
+needs one ladder per entry point — 48 of them, **18,912 bytes** across both
+buffers, which does not exist on this machine.
+
+So the ladder went back to painting a flat wall, the 1,158 bytes of variants
+were deleted, and the courses are now painted **per column, after the ladder**,
+at fractions of that column's own wall extent:
+
+```
+h = 48 - ktop                  ; half the wall's height, this column
+courses at horizon +/- h/4 and +/- 3h/4
+```
+
+Four `sta`s through a self-modifying store. `ktop` already follows perspective
+exactly — it is why the top edge of a receding wall is a proper diagonal — so
+**anything measured as a fraction of the wall inherits perspective for free.**
+A head-on wall has constant `ktop` and keeps level courses, which is also right.
+
+Net: **−1,158 bytes of variants, +81 bytes of engine**, 11.2 → 10.5 fps.
+
+### The bug was in the instrument, not the engine
+
+The new check failed — `pitch 0 rows near, 0 far`. Six increasingly baffled
+measurements said the code requested rows 40, 55, 24 and 71 and only 24 and 55
+ever got painted, from four unconditional `jsr`s to the same subroutine.
+
+The engine was correct throughout. `MAPBASE` is `$7000`; `ROWLO`/`ROWHI`, the
+row→address table the painter indexes, sits at `$6F00`, **immediately below
+it**. The test built its synthetic wall with
+
+```python
+s.p[MAPBASE + (px + dx) + (py + dy) * 32] = 1
+```
+
+and the player starts at (4,6), so every `dy` below −6 wrote *underneath* the
+map and into the row table. 90 of 375 writes escaped; 51 of 96 table entries
+were left reading `$0101`, and the two "missing" mortar writes had gone
+faithfully to `$1101`, where a 30-byte run of the marker value was duly found.
+
+Four checks in `verify.py` built maps that way. All now go through
+`Sweep.cell()`, which discards anything off the 32×32 grid — and the guard was
+watched discarding 90 writes before it was believed.
+
+The lesson is sharper than "clamp your indices". **A harness that pokes memory
+is part of the system under test, and it has no bounds checking either.** The
+symptom was a rendering check failing on a renderer that was right, which is the
+most expensive kind of false report there is: every instinct says to go and
+change the code that just changed.
+
+### Two checks, both watched failing first
+
+- `masonry courses scale with distance` — **15 rows near, 6 far** (was 8 and 5
+  with the variants; the pitch is now `h/2` and falls out of the geometry).
+- `mortar follows the wall, not the horizon` — new. Stands in a corridor and
+  measures the innermost course's distance from the horizon per column, since a
+  nearer wall shows *more* courses and "the first dark row" would compare
+  different ones. Reads **11.5 rows at the near end, 0.5 at the far end, 11
+  distinct offsets**. Run against the shipped v1.4 binary it reads 0.5 and 0.5,
+  2 distinct — pinned to the horizon whatever the wall does. That is what makes
+  it a test rather than a description.
+
+**66/66**, byte-identical across rebuilds.

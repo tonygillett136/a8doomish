@@ -127,6 +127,8 @@ backbuf .ds 1
 side    .ds 1                   ; face the ray hit: 0 = E/W, 1 = N/S
 matid   .ds 1                   ; material of the wall cell we hit
 lastcel .ds 1                   ; previous column's hit cell (edge detection)
+mo_q    .ds 1                   ; mortar: quarter of the wall's half-height
+mo_3q   .ds 1                   ; and three quarters of it
 dist0   .ds 1                   ; the TRUE distance. `dist` gets the light and
                                 ; material offsets folded into it, which is a
                                 ; SHADING trick -- feeding that to the height
@@ -525,6 +527,59 @@ _jwhi   lda WADR_HI,y           ; Two bytes per frame instead of an add per
         lda wlum                ; clc/adc bufhi it replaces.
 _jw     jsr $FFFF
 
+        ; ---- PERSPECTIVE MORTAR ------------------------------------------
+        ; The ladder paints a flat wall; the courses go on here, per column, at
+        ; fractions of THIS column's own wall extent. That is the whole trick:
+        ; ktop already follows perspective correctly -- it is why the top edge
+        ; of a receding wall is a proper diagonal -- so anything measured as a
+        ; fraction of the wall inherits that for free. Head-on walls keep
+        ; horizontal courses (ktop is constant across columns, which is right);
+        ; receding walls get courses that converge toward the horizon.
+        ;
+        ; A suffix ladder cannot do this: it is entered at an offset, so a given
+        ; byte is always at a fixed screen row. Making the pattern relative to
+        ; the entry point needs one ladder per entry point -- 48 of them,
+        ; 18,912 bytes across both buffers. This costs about 150 cycles a column
+        ; and a hundred bytes, and it REPLACED 1,158 bytes of pre-scaled
+        ; variants that only ever fixed the courses' size, never their angle.
+        ;
+        ; The wall spans rows ktop..95-ktop, so with h = 48-ktop the courses sit
+        ; at the horizon +/- h/4 and +/- 3h/4: four lines, evenly spaced, and
+        ; automatically closer together the further away the wall is.
+        lda wlum2
+        cmp wlum
+        beq _nomort             ; contrast already faded out at this distance
+        lda ktop
+        cmp #44
+        bcs _nomort             ; wall too short to carry a course at all
+        lda #48
+        sec
+        sbc ktop                ; h = half the wall's height in rows
+        lsr @
+        lsr @
+        sta mo_q                ; h/4
+        asl @
+        clc
+        adc mo_q                ; 3 * h/4
+        sta mo_3q
+        lda #48
+        sec
+        sbc mo_q
+        jsr _mortrow            ; horizon - h/4
+        lda #47
+        clc
+        adc mo_q
+        jsr _mortrow            ; its mirror below the horizon
+        lda #48
+        sec
+        sbc mo_3q
+        jsr _mortrow            ; horizon - 3h/4
+        lda #47
+        clc
+        adc mo_3q
+        jsr _mortrow
+_nomort
+
         inc col
         lda col
         cmp #NCOLS
@@ -651,88 +706,43 @@ init_player                     ; spawn per THE VESTIBULE's level header
         sta pang
         rts
 
-; ============================================================================
 ; ---------------------------------------------------------------------------
-; _wband -- fill WADR/WADRB for one distance band.
-;   t0/t1 = this band's ladder base in buffer A, m0/m1 = the same in buffer B,
-;   X = first ktop, A = one past the last. Y walks the band from slot 0, so
-;   entry offset (ktop - first)*8 comes straight out of WOFF.
-_wband
-        sta m2
-        ldy #0
-_wb_l   lda WOFF_LO,y
+; _mortrow -- paint one mortar pixel. A = screen row, X = the column's byte
+; index, still live from the ladder (which only ever writes `sta abs,x`).
+; Self-modifies its own store rather than going indirect: absolute,x is 5
+; cycles against 6, and the row address has to be computed either way.
+_mortrow
+        tay
+        lda ROWLO,y
+        sta _mst+1
+        lda ROWHI,y
         clc
-        adc t0
-        sta WADR_LO,x
-        lda WOFF_HI,y
-        adc t1
-        sta WADR_HI,x
-        lda WOFF_LO,y
-        clc
-        adc m0
-        sta WADRB_LO,x
-        lda WOFF_HI,y
-        adc m1
-        sta WADRB_HI,x
-        iny
-        inx
-        cpx m2
-        bne _wb_l
+        adc bufpg               ; whichever buffer is the back one
+        sta _mst+2
+        lda wlum2
+_mst    sta $FFFF,x
         rts
 
+; ============================================================================
 build_ramtabs
-        ; ---- wall dispatch: four distance bands, four ladder variants ------
-        ; ktop 0-11 -> LADW  (course pitch 12, walls that fill the screen)
-        ; ktop 12-23 -> LADW1 (pitch 8)
-        ; ktop 24-35 -> LADW2 (pitch 5)
-        ; ktop 36-48 -> LADW3 (pitch 3, the far walls; ktop 48 lands on its rts)
-        ; Measured, ktop runs 16 at two cells to 43 at ten, so this spans the
-        ; whole useful range. The selection is free: the table it writes is the
-        ; one the renderer already indexes by ktop.
-        ldx #<LADW_A
-        ldy #>LADW_A
-        lda #<LADW_B
-        sta m0
-        lda #>LADW_B
-        sta m1
-        stx t0
-        sty t1
         ldx #0
-        lda #12
-        jsr _wband
-        ldx #<LADW1_A
-        ldy #>LADW1_A
-        stx t0
-        sty t1
-        lda #<LADW1_B
-        sta m0
-        lda #>LADW1_B
-        sta m1
-        ldx #12
-        lda #24
-        jsr _wband
-        ldx #<LADW2_A
-        ldy #>LADW2_A
-        stx t0
-        sty t1
-        lda #<LADW2_B
-        sta m0
-        lda #>LADW2_B
-        sta m1
-        ldx #24
-        lda #36
-        jsr _wband
-        ldx #<LADW3_A
-        ldy #>LADW3_A
-        stx t0
-        sty t1
-        lda #<LADW3_B
-        sta m0
-        lda #>LADW3_B
-        sta m1
-        ldx #36
-        lda #49
-        jsr _wband
+_brw0   lda WOFF_LO,x           ; buffer A's wall ladder
+        clc
+        adc #<LADW_A
+        sta WADR_LO,x
+        lda WOFF_HI,x
+        adc #>LADW_A
+        sta WADR_HI,x
+        lda WOFF_LO,x           ; buffer B's, which no longer has to sit
+        clc                     ; exactly $0800 above it
+        adc #<LADW_B
+        sta WADRB_LO,x
+        lda WOFF_HI,x
+        adc #>LADW_B
+        sta WADRB_HI,x
+        inx
+        cpx #49
+        bne _brw0
 
         ldx #0
 _brw

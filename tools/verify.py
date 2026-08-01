@@ -62,6 +62,20 @@ class Sweep:
     def m(self):
         return self.a.memory()
 
+    def cell(self, x, y, v):
+        """Write one map cell, DISCARDING anything outside the 32x32 grid.
+
+        Every synthetic map in this file must go through here. MAPBASE is
+        $7000 and the renderer's row->address table ROWLO/ROWHI lives at
+        $6F00, immediately BELOW it, so an unclamped negative index does not
+        raise -- it silently rewrites the table the wall painter indexes, and
+        the game then writes pixels into arbitrary memory. That is not a
+        theoretical hazard: it cost a full debugging session, because the
+        symptom is a rendering check failing on a renderer that is correct.
+        """
+        if 0 <= x < 32 and 0 <= y < 32:
+            self.p[MAPBASE + x + y * 32] = v
+
     def go(self, n=1, joy=0, trig=0):
         self.a.inp.joy0 = joy
         self.a.inp.trig0 = trig
@@ -76,6 +90,24 @@ class Sweep:
                 return True
             self.go(1, joy=joy)
         return pred(self.m())
+
+    def go_tick(self, joy=0, trig=0, limit=16):
+        """Advance exactly ONE render tick, however many frames that takes.
+
+        Steering in fixed FRAME counts is a livelock waiting to happen: the
+        player only turns once per render tick, so a 2-frame step contains no
+        turn at all whenever the render period exceeds 2 frames -- which it
+        always does. descend() got away with it at 11.2 fps and stopped getting
+        away with it at 10.5, walking in a straight line past its first corner.
+        This file's own docstring says to depend on game STATE rather than frame
+        counts; this is that, applied to the one place that still didn't.
+        """
+        r0 = self.m()[RENDERS]
+        for _ in range(limit):
+            self.go(1, joy=joy, trig=trig)
+            if self.m()[RENDERS] != r0:
+                return True
+        return False
 
     def pull_trigger(self):
         self.go(3, trig=1)
@@ -395,12 +427,27 @@ class Sweep:
         # Masonry courses must SHRINK with distance. They used to be one dark
         # row in four at a fixed screen pitch, so a wall two cells away and one
         # ten cells away had identical brick sizes -- the first thing an outside
-        # reviewer noticed. Four pre-scaled ladder variants, selected through
-        # the dispatch table already indexed by ktop, so the choice costs no
-        # cycles. Measured as the pitch at a near wall versus a far one.
+        # reviewer noticed. The courses are now painted per column at fractions
+        # of that column's own wall extent, so the scaling is inherent rather
+        # than selected. Measured as the pitch at a near wall versus a far one.
         near, far = self.course_pitch()
         self.chk('masonry courses scale with distance', near > far >= 2,
                  'pitch %d rows near, %d far' % (near, far))
+
+        # ...and they must follow the WALL, not the horizon. Scaling alone does
+        # not give perspective: the pre-scaled variants scaled correctly and
+        # still drew every course parallel to the horizontal, because a suffix
+        # ladder is entered at an offset and a given byte is therefore always at
+        # a fixed screen row. Looking along a corridor, the innermost course
+        # must sit FURTHER from the horizon on the near part of a receding wall
+        # than on the far part -- that gap is the convergence. On the shipped
+        # v1.4 binary this reads -3.0 (the course is pinned at half a row from
+        # the horizon whatever the wall does), which is what makes it a test.
+        nr, fr, nd = self.mortar_perspective()
+        self.chk('mortar follows the wall, not the horizon',
+                 nr - fr >= 4 and nd >= 5,
+                 'innermost course %g rows from horizon at the near end, %g at '
+                 'the far end, %d distinct offsets' % (nr, fr, nd))
 
         gun = self.weapon_on_every_level()
         self.chk('the gun is drawn on every level', min(gun) >= 80,
@@ -672,6 +719,60 @@ class Sweep:
         want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
         return before, after if digits == want else -1
 
+    def mortar_perspective(self):
+        """How far the innermost course sits from the horizon, near vs far.
+
+        Stands in a corridor looking along it, so the side walls recede and
+        every column sees a wall of a different height. Reads, per column, the
+        innermost course's distance from the horizon -- innermost, because a
+        nearer wall shows MORE courses, so "the first dark row" would compare
+        different courses between columns and measure nothing.
+
+        Returns (near, far, distinct): the offset where the wall is tallest,
+        where it is shortest, and how many distinct offsets appeared at all.
+        """
+        import metrics as M
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        for i in range(6):
+            s.p[AC_LIVE + i] = 0
+        m = s.m()
+        px, py = m[PX_HI], m[PY_HI]
+        for dx in range(0, 20):
+            for dy in range(-3, 4):
+                s.cell(px + dx, py + dy, 0 if dy == 0 else 1)
+        s.p[PX_HI], s.p[PX_LO] = px, 0x80
+        s.p[PY_HI], s.p[PY_LO] = py, 0x80
+        s.p[PANG] = 0
+        s.go(30)
+
+        L = M.luma(M.grab(s.a))
+        ramp = M.ramp_from_ladders()
+        seen = []
+        for c in range(80):
+            col = [L[r][c] for r in range(96)]
+            wall = [r for r in range(96) if col[r] != ramp.get(r, -1)]
+            if len(wall) < 4:
+                continue
+            kt = min(wall)
+            # only the hue band carries courses; outside it the ladder paints
+            # dark caps, darker than the mortar and easily mistaken for it
+            lo, hi = max(30, kt), min(65, 95 - kt)
+            if hi - lo < 4:
+                continue
+            seg = [col[r] for r in range(lo, hi + 1)]
+            dk = min(seg)
+            if seg.count(dk) == len(seg):      # one shade: courses faded out
+                continue
+            dark = [r for r in range(lo, hi + 1) if col[r] == dk]
+            seen.append((kt, min(abs(r - 47.5) for r in dark)))
+        if not seen:
+            return 0, 0, 0
+        seen.sort()
+        return seen[0][1], seen[-1][1], len({o for _, o in seen})
+
     def course_pitch(self):
         """Course pitch in screen rows at a near wall and a far one.
 
@@ -693,7 +794,7 @@ class Sweep:
         def pitch(D):
             for dy in range(-12, 13):
                 for dx in range(1, 16):
-                    s.p[MAPBASE + (px + dx) + (py + dy) * 32] = 1 if dx >= D else 0
+                    s.cell(px + dx, py + dy, 1 if dx >= D else 0)
             s.p[PX_HI], s.p[PX_LO] = px, 0x80
             s.p[PY_HI], s.p[PY_LO] = py, 0x80
             s.p[PANG] = 0
@@ -992,7 +1093,7 @@ class Sweep:
         s.p[PX_LO] = s.p[PY_LO] = 0x80
         for dy in range(-12, 13):
             for dx in range(2, 5):
-                s.p[MAPBASE + (px + dx) + (py + dy) * 32] = 1
+                s.cell(px + dx, py + dy, 1)
         s.go(30)
         L = M.luma(M.grab(s.a))
         ramp = M.ramp_from_ladders()
@@ -1060,7 +1161,7 @@ class Sweep:
                 s.p[PANG] = 0
                 if wall:
                     for dy in range(-4, 5):
-                        s.p[MAPBASE + (px + 3) + (py + dy) * 32] = 1
+                        s.cell(px + 3, py + dy, 1)
                 if place_husk:
                     for ad, v in ((AC_XHI, px + 6), (AC_XLO, 0x80), (AC_YHI, py),
                                   (AC_YLO, 0x80), (AC_LIVE, 1), (AC_STATE, 1),
@@ -1405,7 +1506,7 @@ class Sweep:
             s.a.frame(200)
             m = s.m()
             for dy in range(-3, 4):
-                s.p[MAPBASE + (m[PX_HI] + 4) + (m[PY_HI] + dy) * 32] = mat
+                s.cell(m[PX_HI] + 4, m[PY_HI] + dy, mat)
             for i in range(6):
                 s.p[AC_LIVE + i] = 0          # nothing may occlude the wall
             s.go(30)
@@ -1458,7 +1559,8 @@ class Sweep:
         # oscillates. Re-planning costs nothing here and makes the check
         # measure the level rather than the quality of my steering.
         i = 1
-        for step in range(8000):
+        stuck, lastpos = 0, None
+        for step in range(2500):        # render ticks now, not frames
             mm = self.m()
             if mm[WONDONE]:
                 break
@@ -1471,6 +1573,22 @@ class Sweep:
                 self.p[HEALTH] = 100
             px = mm[PX_HI] + mm[PX_LO] / 256.0
             py = mm[PY_HI] + mm[PY_LO] / 256.0
+            # Stuck detector. The autoplayer has had one for ages; descend
+            # never did, and sat on a knife edge because of it: the turn
+            # threshold is `abs(err) > 24`, so a walker whose heading error
+            # settles at EXACTLY 24 walks forward forever, into a wall, and
+            # re-routing cannot help because the fresh route from a pinned
+            # position is the same route. Found when a 6% frame-rate change
+            # nudged the trajectory onto that boundary at (24.0, 13.7).
+            pos = (mm[PX_HI], mm[PX_LO], mm[PY_HI], mm[PY_LO])
+            stuck = stuck + 1 if pos == lastpos else 0
+            lastpos = pos
+            if stuck > 10:
+                for _ in range(3):
+                    self.go_tick(joy=0x08)
+                self.go_tick(joy=0x01)
+                stuck = 0
+                continue
             if step % 150 == 149:
                 fresh = self.route(bytes(mm[MAPBASE:MAPBASE + 0x400]),
                                    (mm[PX_HI], mm[PY_HI]), goal)
@@ -1486,9 +1604,9 @@ class Sweep:
             want = int(math.atan2(dy, dx) / (2 * math.pi) * 256) & 255
             err = ((want - mm[PANG] + 128) & 255) - 128
             if abs(err) > 24:
-                self.go(2, joy=0x08 if err > 0 else 0x04)
+                self.go_tick(joy=0x08 if err > 0 else 0x04)
             else:
-                self.go(2, joy=0x01)
+                self.go_tick(joy=0x01)
         if not self.m()[WONDONE]:
             return False
         self.pull_trigger()

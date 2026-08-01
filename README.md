@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
   <img src="https://img.shields.io/badge/binary-28%2C723%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-61%2F61-2e7d32">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-66%2F66-2e7d32">
 </p>
 
 ---
@@ -89,9 +89,9 @@ Joystick in port 1. **Fire** starts, and fires. That is the whole control scheme
 ## What it does
 
 - **Raycast 3D** in GTIA mode 9 — 80×96 logical over 192 scanlines, 40 ray columns
-- **~11 fps** world render, with a **50 Hz feedback layer** that never stalls:
+- **~10.5 fps** world render, with a **50 Hz feedback layer** that never stalls:
   input, weapon, kick, bob, audio and HUD all run in the VBI, decoupled from the
-  renderer. That decoupling is the single thing that makes 11 fps feel
+  renderer. That decoupling is the single thing that makes 10.5 fps feel
   deliberate rather than broken.
 - **Momentum movement** — DOOM's friction model, wall sliding, a body radius
 - **A shotgun** with screen kick, range-banded damage, and a muzzle flash that
@@ -200,7 +200,7 @@ Both were one measurement away.
 
 ### 2. The 50 Hz layer is the whole trick
 
-The world redraws at ~11 fps. Input, weapon animation, screen kick, weapon bob,
+The world redraws at ~10.5 fps. Input, weapon animation, screen kick, weapon bob,
 audio stepping and the HUD all run in the 50 Hz vertical-blank interrupt and
 never wait for it. Pull the trigger and the gun fires *on the next video frame*,
 with a kick that decays linearly across two world renders. The game feels
@@ -227,7 +227,7 @@ process** — no emulator subprocess, nothing to leave running afterwards.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **61 / 61** |
+| **Acceptance sweep** | **66 / 66** |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | The bestiary, measured | hulk 120→60→0 over exactly two point-blank shots; gunner attacking within 150 frames; hulk 1.23× a husk's height | all sweep checks |
@@ -278,11 +278,15 @@ doesn't.
   the hue seam are all in the DEVLOG with what each one failed at. It is much
   better than it was and it is not solved.
 - ~~Wall courses are locked to screen rows, not depth~~ — **FIXED**, after a
-  reviewer spotted it from a screenshot without ever seeing this list. Four
-  pre-scaled ladder variants (pitch 12/8/5/3) selected by distance: measured at
-  8 rows near and 5 far, where it was 4 everywhere. 1,158 bytes and **zero
-  cycles**, because the dispatch table it selects through was already indexed by
-  the wall's top row.
+  reviewer spotted it from a screenshot without ever seeing this list. The
+  courses are painted per column at fractions of that column's own wall extent,
+  so they both scale with distance (15 rows near, 6 far, where it was 4
+  everywhere) and **follow the wall's perspective** instead of running parallel
+  to the horizontal — the innermost course sits 11.5 rows from the horizon at
+  the near end of a receding wall and 0.5 at the far end. This *replaced* an
+  earlier fix of four pre-scaled ladder variants, which scaled correctly but
+  drew every course dead level: a suffix ladder is entered at an offset, so a
+  given byte always lands on a fixed screen row. Net −1,077 bytes.
 
 ---
 
@@ -290,7 +294,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 61-point acceptance sweep, in process
+python3 tools/verify.py        # 66-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```
