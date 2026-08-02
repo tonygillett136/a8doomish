@@ -173,3 +173,55 @@ most expensive thing you bought.
 
 *Written in the last ten minutes of the sprint it describes, 1 August 2026 —
 which is itself lesson 10 in practice.*
+
+---
+
+*Two more, added 2 August 2026 after four rounds on a real CRT and one feature
+built, measured and deliberately not shipped.*
+
+## 14. An instrument has a resolution — do not ask it for more
+
+Measuring a hardware constant meant photographing a screen and reading positions
+off it. The first design drew twelve steps a few pixels apart — finer than a
+photograph of that screen resolves — and produced slope estimates spanning a
+**factor of three**, each of which felt like a measurement at the time. The
+design that worked used four large blocks, far apart, bracketed by markers, with
+a reference scale drawn into the image itself. Legible on the first photograph.
+
+Over-asking does not return a rough answer with wide error bars. It returns a
+**confident wrong one**, because you read structure into noise and act on it. And
+it spends the scarcest resource in any measurement campaign: the other party's
+willingness to run the test again.
+
+*Commercially:* survey questions finer than respondents can distinguish, dashboards
+quoting four significant figures on a sampled metric, A/B tests sized for effects
+smaller than their own variance. State the precision you need *before* designing
+the instrument, and prefer few well-separated signals to many crowded ones — the
+gaps carry the information, and gaps survive a poor instrument.
+
+## 15. Measure against the incumbent, not against zero
+
+A feature was built to fix a known defect. On the region it acts on it looked
+strong — six to eight points better. Measured across the whole picture, against
+the version already shipped, it was worth **zero to 1.4 points and cost a tenth
+of the frame rate**. The previous release had already taken that measure from
+56% to 90–99%; there was nothing left to win. It was reverted.
+
+Worse, an early version of its selection rule fired on a case it could not
+improve and scored **76% where doing nothing scored 85%** — an optimisation
+actively worse than absence. Only comparing against the incumbent could reveal
+that. *Anything that can fire where it does not help will eventually fire where
+it hurts.*
+
+*Commercially:* benefits cases built against a strawman baseline; pilots measured
+on the segment where they work; "uplift" quoted on the touched cohort rather than
+the whole book. Always three numbers — **incumbent, candidate, theoretical
+ceiling** — over the full surface, priced in the currency the customer feels. The
+candidate-to-ceiling gap says whether to keep tuning; the incumbent-to-ceiling gap
+says whether the approach has any headroom at all, and is worth computing *before*
+you build. And the better your last release was, the harder the next must fight to
+earn its cost: that is maturity, not failure, and it is invisible unless you
+measure the baseline alongside every single time.
+
+**"Built, measured, not shipped" is a successful project.** The alternative is
+shipping the cost without the benefit and never finding out.
