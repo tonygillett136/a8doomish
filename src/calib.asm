@@ -24,8 +24,11 @@
 ; ===========================================================================
 CALIB_A = $90                   ; hue A -- low nibble MUST be 0 in GTIA 9
 CALIB_B = $30                   ; hue B
+CALIB_M = $50                   ; marker bands -- a THIRD hue, so the strip
+                                ; above the staircase cannot be mistaken for
+                                ; the screen above it, which is also hue A
 CB_TOP  = 40                    ; scanlines skipped from the top of the frame
-CB_LINES = 90                   ; 15 steps of 6 scanlines
+CB_LINES = 80                   ; 20 steps of 4 scanlines
 ; VCOUNT and WSYNC already come from game.asm's DLI section
 
 ; Placement, learned the hard way: buffer B is NOT free. It looks unused in this
@@ -61,17 +64,17 @@ _kal_hud
         inx
         cpx #40
         bne _kal_hud
-        ldx #0                  ; six scanlines per step, fifteen steps: each
-        lda #<CSLIDE            ; step waits two cycles longer than the one below
-_kal_step
-        ldy #6
-_kal_rep
+        ldx #0                  ; four scanlines per step, twenty steps, each
+        lda #<CSLIDE            ; FOUR cycles longer than the one below it: this
+_kal_step                       ; run deliberately asks for more delay than a
+        ldy #4                  ; scanline can afford, so the picture shows
+_kal_rep                        ; where the budget runs out as well as the slope
         sta CTAB,x
         inx
         dey
         bne _kal_rep
         clc
-        adc #1
+        adc #2
         cpx #CB_LINES
         bne _kal_step
 _kal_fever
@@ -133,6 +136,13 @@ _kal_skip
         sta WSYNC
         dex
         bne _kal_skip
+        ldx #8                  ; a solid marker band above the staircase...
+_kal_topref
+        sta WSYNC
+        lda #CALIB_M
+        sta COLBKH
+        dex
+        bne _kal_topref
         ldx #0
 _kal_line
         sta WSYNC               ; every line STARTS in hue A...
@@ -142,14 +152,22 @@ _kal_line
         sta _kal_j+1
 _kal_j    jmp CSLIDE
 CSLIDE
-        .rept 14                ; 14 and not more: the body is 32 cycles plus
-        nop                     ; two per NOP, against ~62 free in a scanline.
-        .endr                   ; Overrun shows as a step that does not split.
+        .rept 40                ; deliberately far past what a line can afford.
+        nop                     ; The steps that overrun take TWO scanlines each
+        .endr                   ; and so come out DOUBLE HEIGHT -- which is the
+                                ; measurement: the first tall step is the limit.
         lda #CALIB_B            ; ...and switches to hue B here
         sta COLBKH
         inx
         cpx #CB_LINES
         bne _kal_line
+        ldx #8                  ; ...and another below it, so the staircase is
+_kal_botref                     ; bracketed and its steps can be counted from
+        sta WSYNC               ; either end without ambiguity
+        lda #CALIB_M
+        sta COLBKH
+        dex
+        bne _kal_botref
         lda #CALIB_A            ; leave the rest of the frame in hue A
         sta COLBKH
         rts

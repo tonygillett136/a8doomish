@@ -2330,3 +2330,44 @@ Verified in the emulator as far as it can go: boots, does not hang, display list
 still 232 scanlines, the picture is identical across frames, the HUD is blanked,
 the ruler is exact in memory, and the staircase's table steps every six lines.
 What it cannot show is the only thing being asked.
+
+---
+
+## It works. Two hues on one scanline, on a real 800XL
+
+The calibration image went onto the CRT and came back a **clean staircase**.
+
+That answers, at a stroke, the question this emulator could not be made to
+answer at all — not in the default build, not in a cycle-exact one, not in GTIA
+mode 9 and not in plain ANTIC F. **A mid-scanline `COLBK` write splits a line on
+real hardware, and the edges are crisp.** No smear across GTIA's four-hi-res-
+pixel cell, which was the failure mode I thought most likely to sink it.
+
+Read off the photograph, against the luminance ruler:
+
+- the steps are **even**, so delay → pixel is linear, as predicted
+- the staircase spans roughly **pixels 0 to 32** for 14 NOPs (28 cycles), so
+  about **1.1–1.2 pixels per cycle** — close to the theoretical one mode-9 pixel
+  per machine cycle
+- full-width bands at the top of the run are, most likely, the steps whose body
+  overran its scanline
+
+That last one is the number that matters most and the one the image was too
+timid to pin down: **how far right can the transition be pushed before the
+per-line budget runs out?** With only 14 NOPs in the slide I may simply not have
+asked for enough. If the true ceiling is ~32 pixels then the trick only helps on
+the left third of the screen — in a corridor that is the left wall and not the
+right one, which is half a feature.
+
+### Round two asks the question properly
+
+`calib.xex` now carries a **40-NOP slide over 20 steps, four cycles apart**,
+deliberately demanding far more delay than a scanline can afford. Steps past the
+limit take two scanlines instead of one and so come out **double height** — so
+the first tall step *is* the measurement. Above and below the staircase sit
+solid bands in a **third hue**, because the first version's top marker was hue A
+against a screen that was already hue A and therefore invisible.
+
+One more photograph gives the slope, the reachable window, and the cliff edge —
+and then the kernel gets written against measured constants with nothing left to
+guess.
