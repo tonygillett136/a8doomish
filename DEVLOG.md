@@ -2230,10 +2230,51 @@ Two self-inflicted bugs worth keeping:
 
 The `ert * > $4000` guard also fired the moment the experiment grew game.asm
 into the display lists, which is the fifth time that law has collected.
+### The cycle-exact rebuild — tried, and it does not help
+
+The obvious escape was to rebuild the emulator with sight. The source tree was
+already here, so: `./configure --target=libatari800 --enable-newcycleexact`.
+
+Configure printed **"Using cycle exact?....................: yes"** and left
+`/* #undef NEW_CYCLE_EXACT */` in `config.h`. Its own logic:
+
+```
+if [ "$a8_target" = "libatari800" ]; then
+    WANT_NEW_CYCLE_EXACT=yes          # sets the variable...
+elif [ ... ]; then
+    ...  #define NEW_CYCLE_EXACT 1    # ...but only this branch emits the macro
+```
+
+For the libatari800 target the flag is set and the macro is never defined. An
+upstream bug, and a fine specimen of the genre: the build **reports a capability
+it does not have.** `antic.c` carries 40 references to that macro and `gtia.c`
+20 — all compiled out, while the summary says yes.
+
+Defined it by hand and rebuilt; `antic.o` now genuinely calls `CYCLE_MAP_*`, so
+the cycle-exact code is live. Linked a second dylib alongside the original,
+re-ran the probe. **No change.** Then, to separate "the emulator cannot" from
+"GTIA mode 9 specifically resists", ran the same probe in plain ANTIC F writing
+COLPF2 — the register that actually paints the hi-res background. Also no
+change: different lines take different values, no line ever splits.
+
+Settled across two graphics modes, two colour registers and two emulator builds:
+**libatari800 renders one colour-register value per scanline.** NEW_CYCLE_EXACT
+buys DMA and CPU cycle accounting, not intra-scanline colour.
+
+The link needed unpicking, which is worth recording. `src/` and
+`src/libatari800/` each contain `sound.o`, `input.o`, `video.o` and
+`statesav.o`, and they are not duplicates but *complements*: `src/` defines
+`Sound_*`/`INPUT_*`/`StateSav_*`, the subdirectory defines the `PLATFORM_*`
+backends. Both are needed. `file_export.o` cannot link for this target at all —
+`video_frame_count` is compiled out — so it takes a no-op stub.
 
 ### Where it rests
 
-Not killed on merit — killed on observability. It becomes viable the day
-libatari800 is rebuilt cycle-exact (a real option, at the price of a slower
-67-check sweep), or the day we accept writing it blind and testing only on the
-CRT. Reverted byte-identical to v1.6; nothing shipped.
+Not killed on merit — killed on observability, and the one fix available does
+not fix it. It needs either a different emulator (Altirra models this properly)
+or a calibrate-on-hardware round trip: ship a test image whose every line
+carries a *known* delay, photograph the CRT once, read the delay→pixel mapping
+straight off the picture, and write the real kernel against measured constants
+instead of guesses. That converts "blind" into one round trip.
+
+Reverted byte-identical to v1.6; sweep still 67/67; nothing shipped.
