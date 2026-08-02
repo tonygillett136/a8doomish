@@ -20,7 +20,7 @@
 
 ---
 
-> **Status — runs on real hardware.** Confirmed 1 August 2026 on a PAL 800XL
+> **Status — runs on real hardware.** Confirmed through v1.6 on a PAL 800XL
 > via a Lotharek SIO2SD, after two bring-up runs each found a bug the
 > emulator could not see:
 >
@@ -36,6 +36,11 @@
 > have been. Two of the four status rows were blank, so dropping them costs
 > nothing visible and brings the frame to 232. **Run 3 confirmed both fixes: it
 > boots, locks and plays.**
+>
+> **Run 5 (v1.6)** confirmed the perspective mortar and the moving hue seam on
+> the CRT — the two changes that had been measured but never seen on real
+> hardware, and both of them renderer changes. Nothing in this document is
+> emulator-only.
 >
 > **Run 4 (v1.4)** confirmed the whole feature chain on the CRT — the bestiary,
 > knockback, hurt floors, the redrawn fireballs and the receding masonry — which

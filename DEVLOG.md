@@ -2278,3 +2278,55 @@ straight off the picture, and write the real kernel against measured constants
 instead of guesses. That converts "blind" into one round trip.
 
 Reverted byte-identical to v1.6; sweep still 67/67; nothing shipped.
+
+---
+
+## Run 5, and the calibration image
+
+**v1.5 and v1.6 confirmed on the CRT.** The perspective mortar and the moving
+hue seam — the two changes that had been measured but never seen on real
+hardware, and both of them renderer changes — are good on the 800XL. Nothing in
+this document is emulator-only again.
+
+That clears the way for the mid-scanline experiment, on the terms it stopped on:
+the harness cannot see sub-scanline colour, so the constants have to come from
+the machine. Rather than write the kernel blind, `calib.xex` asks the machine
+directly.
+
+### What it is
+
+`./build.sh -d:CALIB=1` builds a calibration image instead of the game. It
+borrows ABYSS's own display — same display list (232 scanlines), same GTIA mode
+9, same BASIC-off INIT stub — because setting up a screen is exactly the part
+that went wrong twice when this was attempted standalone.
+
+The picture is a **staircase**: ninety scanlines in fifteen steps of six, each
+step waiting two cycles longer than the one below before switching COLBK from
+hue A to hue B. Underneath is a **ruler drawn in luminance** — a bright tick
+every eight pixels, a black notch at centre — which is independent of the hue
+being switched, so the photograph carries its own scale.
+
+One photograph answers all three open questions: whether a mid-line write splits
+a line in GTIA 9 at all; whether the edge is clean or smears across GTIA's
+four-hi-res-pixel cell; and the delay→pixel mapping, so the real kernel can be
+written against measured constants. If the top steps do not split, that marks
+where the per-line cycle budget runs out — which is also worth knowing.
+
+### Three placement bugs, all caught before it went near hardware
+
+- **Buffer B is not free.** It looks unused in this build (nothing flips pages)
+  but init calls `clear_screen`, which zeroes 31 pages from `$8000`. Code parked
+  at `$9400` was wiped between load and entry and the jump landed in zeros. The
+  code now lives in the 442-byte gap between DLISTB's end and `LEVELDATA`, the
+  table at `$9F00`, one page above where `clear_screen` stops.
+- **mads has a flat, case-insensitive namespace.** `_cf_st` in the new file
+  silently bound to `check_floor`'s `_cf_st` in game.asm at `$3F61` — reported
+  as "branch out of range by $5423 bytes", which is exactly that distance. Every
+  label in the file now carries a `_kal_` prefix.
+- **`tya` clobbers the accumulator.** `lda #$44` immediately before it meant the
+  ruler's background came out as the column index rather than a constant.
+
+Verified in the emulator as far as it can go: boots, does not hang, display list
+still 232 scanlines, the picture is identical across frames, the HUD is blanked,
+the ruler is exact in memory, and the staircase's table steps every six lines.
+What it cannot show is the only thing being asked.

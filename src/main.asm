@@ -200,6 +200,9 @@ start
         sta bufpg
         cli
         jsr game_init
+        .ifdef CALIB
+        jmp calib_main          ; -dCALIB=1 builds the mid-scanline colour
+        .endif                  ; calibration image instead of the game
         jsr show_title          ; paints the front buffer and waits for FIRE.
                                 ; Deliberately here and not in the loop: it
                                 ; borrows the running display rather than
@@ -1160,5 +1163,9 @@ SPRITES
 
         org TABLES
         ins 'tables.bin'
+
+        .ifdef CALIB
+        icl 'calib.asm'
+        .endif
 
         run start
