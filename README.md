@@ -14,8 +14,8 @@
   <img src="https://img.shields.io/badge/platform-Atari%20800XL%2FXE-8b1a1a">
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
-  <img src="https://img.shields.io/badge/binary-29%2C357%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-67%2F67-2e7d32">
+  <img src="https://img.shields.io/badge/binary-29%2C606%20bytes-333">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-70%2F70-2e7d32">
 </p>
 
 ---
@@ -295,9 +295,11 @@ doesn't.
   in it has been seen on a CRT — including the renderer changes, which are the
   ones most likely to behave differently there. See
   [what real hardware taught us](#what-real-hardware-taught-us).
-- **No keys or locked doors.** The map format supports them and two levels author
-  them, so the level compiler compiles locked doors down to plain ones rather
-  than ship levels whose exits cannot be reached.
+- ~~No keys or locked doors~~ — **FIXED.** Two levels had authored a locked
+  door and its matching key since they were written, and the compiler flattened
+  them to plain doors because the runtime had no keys. It has them now: THE RED
+  CISTERN's red door and THE MAW's yellow one refuse you until you have found
+  the key its designer placed.
 - **The authored content layer is only half used.** The levels specify 39 actors
   across 5 types and 42 items across 11. The game now takes the
   actors' positions AND types — husk, gunner, spitter, hulk — plus all 16
@@ -341,7 +343,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 67-point acceptance sweep, in process
+python3 tools/verify.py        # 70-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```

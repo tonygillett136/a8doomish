@@ -2597,3 +2597,66 @@ With those, all four descents complete -- including the one that needs a key.
 
 **69/69.** Triggers and ambushes are next; they need the same descent machinery,
 which now works.
+
+---
+
+## The phantom yellow key, and a bug that had corrupted every pickup
+
+Keys ship. The thing standing in the way was not the key code.
+
+Picking up level 2's red key -- type 2, bit 0 -- left the inventory reading **5**:
+bit 0 *and* bit 2, and bit 2 is level 4's yellow. A key the player had never
+found. Static reading got nowhere, so I stopped reading and started measuring:
+
+- **Probe 1: is my code even the writer?** Changed red to set bit 3 instead of
+  bit 0. Inventory read **12**, not 8. So my code wrote its 8 and something else
+  contributed a 4.
+- **Probe 2: is it a stray write to that address?** Moved the inventory byte from
+  `$7A59` to `$7A70`. The phantom bit **followed the symbol**, so it was not a
+  stray store into the old location -- it was going through the one and only
+  `sta keys`.
+- **Probe 3: how many times does that line run?** `inc` on a spare byte at the
+  branch. Answer: **22 times, then 72, then 196** -- continuously, while `itmgot`
+  showed exactly one item taken. Not two pickups. One pickup and a loop that
+  would not end.
+
+`audio_play` takes the sound id in X (`tax`) and never gives it back.
+`check_items` iterates on X. So **every pickup since items existed** left the
+loop counter at 10 and ran the loop on for ~250 iterations over garbage item
+records. Harmless-looking for the game's whole life, because a stray type byte
+could only ever mean "medkit" -- until keys arrived and garbage started reading
+as type 4.
+
+Four bytes of `pha`/`pla` around the sound call. The inventory reads 1.
+
+**That is the fourth X-clobber of this stretch**, and the pattern is no longer a
+coincidence: `open_last` carries the cell index in X, `check_items` carries its
+loop counter in X, `audio_play` destroys X, and the walker's escape had its own
+version. **A register is an interface.** Three of the four were mine; the fourth
+had been shipping since the audio engine went in.
+
+Worth noting what pointed the way. The assembled branches had already been
+checked in the LISTING and the item tables in RAM, both correct -- which is
+exactly what ruled out the arithmetic and left the loop. Verifying the things
+that were right is what made the remaining possibility obvious.
+
+### What ships
+
+THE RED CISTERN's red door and THE MAW's yellow one, as authored, each with the
+key its designer placed -- ahead of supplies in the item table, because without
+it the level cannot be finished. Both had been flattened to plain doors for the
+game's entire life.
+
+    descend 1 -> level 2   keys 0
+    descend 2 -> level 3   keys 1    (red)
+    descend 3 -> level 4   keys 1
+    descend 4 -> victory   keys 5    (red + yellow)
+
+The harness plays by the same rules: `route()` treats a coloured door as wall
+without its key, `_exits` computes reachability as a fixed point over keys within
+reach, and both `descend()` and `playthrough()` fetch a key when the exit needs
+one. The new check asserts refused-without, opens-with, **and that one key sets
+exactly one bit** -- the half that was silently wrong and would have passed a
+check that only tested the door.
+
+**70/70**, byte-identical across rebuilds.
