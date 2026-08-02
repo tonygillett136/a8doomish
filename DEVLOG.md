@@ -2172,3 +2172,68 @@ pixels visible and fails, so it detects husk pixels rather than having been
 softened into always passing.
 
 **67/67**, byte-identical across rebuilds.
+
+---
+
+## Two hues on one scanline: stopped on observability, not on merit
+
+Tony: *"Is it not possible to break the 'one colour per line' rule with some
+fancy timing?"* On real hardware, yes — mid-scanline `COLBK` writes are ordinary
+Atari practice, and mode 9 is unusually friendly to them because **one mode-9
+pixel is exactly one CPU cycle**, so a write can be landed on any pixel boundary
+without sub-cycle tricks.
+
+The spike ran with a kill criterion agreed up front: *hold ≥9 fps and lose the
+seam artefacts on the CRT, or stop.* It stopped, but not where expected.
+
+### The probe that ended it
+
+Six different hues, written ~10 instruction cycles apart, across a single
+scanline, twenty-four lines running. If a mid-line write registers at all, that
+has to show six vertical bands.
+
+Every line came out **one hue — `B`, the last value written.** Our libatari800
+samples the colour registers once per scanline and takes the final value;
+intra-line changes are not modelled. `-cycle-exact` and `-antic-cycle-exact` are
+not options in this build (the emulator treats them as filenames), and there is
+no local source tree to rebuild with `NEW_CYCLE_EXACT`.
+
+So the harness cannot see the thing being built. Every iteration would be blind,
+with the only feedback a CRT in another room — on the most timing-sensitive
+class of code there is. That is a *third* instance of the standing question, and
+the first time the answer has been "this harness cannot see it **at all**".
+
+### What the spike did establish, by measurement
+
+The cost stopped being an estimate. A tight WSYNC-paced kernel over 24 scanlines
+runs at **10.00 fps against 10.40 baseline** — 3.8%, or ~0.16% a scanline, which
+is the ~62-free-cycles-per-line figure confirmed from the other side.
+Extrapolated: **~9.1 fps** for a level start (80 scanlines) and **~7.2 fps** down
+a corridor (192). That is *better* than the 8.3/5.4 I quoted, which was an upper
+bound — the real cost is about two thirds of it.
+
+And a hard design constraint, found the expensive way: **the loop body must fit
+inside one scanline.** The first version's computed jump cost 23 cycles, the body
+overran, each iteration ate *two* lines — 15% for the same 24 lines, and whole
+lines flipping hue rather than splitting. Dropping to a patched low byte and a
+page-aligned slide brought it to 18 cycles. With ~62 instruction cycles a line
+and ~18 fixed, only ~44 remain for positioning: roughly two thirds of the screen
+width, at 2-cycle (≈3-pixel) granularity. Not the free hand it looks like.
+
+Two self-inflicted bugs worth keeping:
+
+- The NOP slide was indexed **two bytes per NOP**. `NOP` is one byte and two
+  cycles; conflating those jumped clean past the slide into whatever followed.
+- The slide's entry byte defaulted to **zero**, which pointed at the routine's
+  own entry point. The DLI recursed and the machine hung from boot — diagnosed
+  from the frame rate reading exactly `0.00`.
+
+The `ert * > $4000` guard also fired the moment the experiment grew game.asm
+into the display lists, which is the fifth time that law has collected.
+
+### Where it rests
+
+Not killed on merit — killed on observability. It becomes viable the day
+libatari800 is rebuilt cycle-exact (a real option, at the price of a slower
+67-check sweep), or the day we accept writing it blind and testing only on the
+CRT. Reverted byte-identical to v1.6; nothing shipped.
