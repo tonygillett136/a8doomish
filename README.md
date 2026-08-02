@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
   <img src="https://img.shields.io/badge/binary-29%2C606%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-70%2F70-2e7d32">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-71%2F71-2e7d32">
 </p>
 
 ---
@@ -343,7 +343,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 70-point acceptance sweep, in process
+python3 tools/verify.py        # 71-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```

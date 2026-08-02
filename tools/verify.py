@@ -476,6 +476,18 @@ class Sweep:
         # since they were written -- THE RED CISTERN's red, THE MAW's yellow --
         # and the compiler flattened them to plain doors for the game's whole
         # life because the runtime had no keys.
+        # Any state that STOPS and waits for input has to say what it wants.
+        # The floor-cleared banner did not: it read "FLOOR CLEARED - KILLS 005"
+        # and then waited for FIRE indefinitely, so a player who reached the
+        # exit reasonably concluded the game was stuck. Every other waiting
+        # state said so -- the title, the death banner, the end card -- which is
+        # exactly why nobody noticed the one that did not.
+        waits, says = self.exit_banner_tells_you()
+        self.chk('the floor-cleared banner says what it wants',
+                 waits and says,
+                 'reaching the exit halts until FIRE: %s. the banner says so: %s'
+                 % (waits, says))
+
         blocked, opened, inv = self.locked_door()
         self.chk('a locked door needs its key', blocked and opened and inv == 1,
                  'without the key: %s. with it: %s. picking the key up leaves '
@@ -769,6 +781,27 @@ class Sweep:
         s.p[WONDONE] = 0
         want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
         return before, after if digits == want else -1
+
+    def exit_banner_tells_you(self):
+        """Does reaching the exit halt, and does the banner name the key?"""
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        m = s.m()
+        grid = bytes(m[MAPBASE:MAPBASE + 0x400])
+        ex = [(i % 32, i // 32) for i, v in enumerate(grid) if v == 0x0C]
+        if not ex:
+            return False, False
+        s.p[PX_HI], s.p[PX_LO] = ex[0][0], 0x80
+        s.p[PY_HI], s.p[PY_LO] = ex[0][1], 0x80
+        s.go(12)
+        lvl = s.m()[LEVELNO]
+        s.go(60)                                  # it must NOT advance on its own
+        waits = s.m()[LEVELNO] == lvl and s.m()[WONDONE] == 1
+        row = s.m()[HUDRAM + 40:HUDRAM + 72]      # internal charset: 'A' is 33
+        text = ''.join(chr(65 + b - 33) if 33 <= b <= 58 else ' ' for b in row)
+        return waits, 'FIRE' in text
 
     def locked_door(self):
         """Refused without the key, opens with it, and one key sets one bit."""

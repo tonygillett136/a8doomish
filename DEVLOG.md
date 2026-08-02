@@ -2660,3 +2660,46 @@ exactly one bit** -- the half that was silently wrong and would have passed a
 check that only tested the door.
 
 **70/70**, byte-identical across rebuilds.
+
+---
+
+## "I don't seem to move to the next floor"
+
+Tony, on hardware: clears THE VESTIBULE, reads *FLOOR CLEARED - KILLS 005*,
+walks onto the pulsing exit, and nothing happens.
+
+Tested rather than assumed, and the code is innocent. Standing on the exit sets
+`wondone`; I left it sixty ticks and the level did not advance; one trigger pull
+and `levelno` went 0 to 1. **Reaching the exit halts and waits for FIRE, by
+design** -- a beat to read the tally before dropping.
+
+The bug is that the banner never said so:
+
+| state | what it told you |
+|---|---|
+| title | PRESS FIRE TO DESCEND |
+| death | YOU DIED - FIRE TO RETRY |
+| end card | FIRE AGAIN |
+| **floor cleared** | **FLOOR CLEARED - KILLS 005** |
+
+Every waiting state in the game announced itself except the one a player meets
+three times a run. It now reads `FIRE TO DESCEND      KILLS 000`.
+
+Two things worth keeping from this.
+
+**Only a fresh player could find it.** Everyone who knew the game pressed fire
+without thinking, because pressing fire is what you do -- the knowledge that made
+the sweep's `descend()` correct (it pulls the trigger) is the same knowledge that
+made the omission invisible. Round ten of the visual critique found three defects
+by being forbidden the source; this is the same instrument pointed at
+interaction. **A reviewer who knows the controls stops being able to see the
+prompt.**
+
+**Sixty-nine green checks and none of them asked "does the player know what to
+do?"** They asked whether the mechanism worked, in every direction, at pixel
+level. The new check asks a different question: does a state that STOPS say what
+it is waiting for? It asserts both halves -- that reaching the exit really does
+halt (60 ticks, no advance), and that the banner names the key. Either half alone
+would pass a broken game.
+
+**71/71.**

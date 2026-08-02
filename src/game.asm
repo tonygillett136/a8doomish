@@ -922,8 +922,17 @@ hud_labels
         dta d'HEALTH      AMMO        ABYSS   '
 win2_msg
         dta d'  YOU ESCAPED THE ABYSS         '
-won_msg
-        dta d'     FLOOR CLEARED - KILLS      '
+won_msg                         ; The one waiting state in normal play that
+                                ; did NOT say what it was waiting for. The
+                                ; title says PRESS FIRE TO DESCEND, death says
+                                ; FIRE TO RETRY, the end card says FIRE AGAIN --
+                                ; and the floor-cleared banner, which every
+                                ; player meets three times a run, said only
+                                ; FLOOR CLEARED - KILLS 005 and then waited
+                                ; forever. Tony walked onto the exit, read it,
+                                ; and reasonably concluded the game was stuck.
+                                ; Kills digits land on the last three columns.
+        dta d'FIRE TO DESCEND      KILLS      '
 dead_msg
         dta d'  YOU DIED - FIRE TO RETRY      '
         ert * > $ABA0, "game.asm's table block has run into title.asm's at $ABA0"
