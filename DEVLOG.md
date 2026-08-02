@@ -2371,3 +2371,50 @@ against a screen that was already hue A and therefore invisible.
 One more photograph gives the slope, the reachable window, and the cliff edge —
 and then the kernel gets written against measured constants with nothing left to
 guess.
+
+---
+
+## The measurement, and what it costs
+
+Four rounds on the CRT. The constants, with the confidence each deserves:
+
+| | value | how |
+|---|---|---|
+| mid-line `COLBK` split in GTIA 9 | **works, edges clean** | CRT, rounds 1/3/4 — no smear across GTIA's 4-pixel cell |
+| per-line budget | **12 NOPs fit, 14 do not** | emulator: an overrunning step takes two scanlines, so the band's HEIGHT gives it away. ~58–61 instruction cycles |
+| delay → pixel | **≈4 pixels per cycle** (≈8 per NOP) | CRT round 4: three block edges at ~pixels 14 / 54 / 76, four NOPs apart. ±25% |
+| reachable range | **12 NOPs ≈ 94 px > the 80-px width** | follows from the above, and explains why round 3's steps kept running off the left edge |
+| placement granularity | **~8 px per NOP** (~4 with odd-cycle padding) | one NOP is the finest step the slide offers |
+
+So the whole width is reachable, the edge is clean, and the seam can be placed
+to within about a tenth of the screen — which is far finer than the thing being
+corrected. **The idea is sound and buildable.**
+
+### The honest price
+
+A serviced scanline costs its whole free-cycle budget: measured earlier at
+**~0.16% of a frame per scanline**. Against the 67-check sweep's baseline of
+10.4 fps that is:
+
+- 20 buffer rows (40 scanlines) — a fixed budget spent on the worst rows: **~9.7 fps**
+- every mixed row at a level start (80 scanlines): **~9.1 fps**
+- every mixed row down a corridor (192 scanlines): **~7.2 fps**
+
+against ~79% wall-hue correctness in a corridor today, which the per-scanline
+version would take close to 100% — and would fix the mis-hued ceiling as well,
+which the moving seam cannot.
+
+### Four rounds, three of them my fault
+
+Round 1 answered the real question and I should have stopped to think harder
+about what round 2 needed to be. Round 2 asked for 40 NOPs — far past the
+budget — so most steps overran and the picture was unreadable. Round 3 was
+correct but drew twelve steps a few pixels apart, finer than a photograph of a
+CRT resolves; my slope estimates off it ranged over a factor of three. Round 4
+asked for four big blocks and was legible immediately.
+
+The lesson is not about the 6502. **An instrument has a resolution, and asking
+it for more precision than it has does not give you a rough answer — it gives
+you a confident wrong one.** Three of my four rounds asked the CRT and a phone
+camera for more than they could deliver. The fix each time was to ask for less,
+more clearly.
