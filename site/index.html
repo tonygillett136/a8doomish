@@ -184,27 +184,27 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
 <section>
   <div class="wrap">
-    <h2>THE MACHINE</h2>
+    <h2>HOW IT WORKS</h2>
     <p class="lead">An Atari 800XL has a 1.77&nbsp;MHz 6502 and 64&nbsp;KB of RAM.
     A full-screen repaint costs more than a frame. Every part of this is a small measured decision:</p>
     <div class="numbers">
-      <div><b>29&thinsp;KB</b><span>THE WHOLE GAME</span></div>
-      <div><b>5</b><span>CYCLES PER PIXEL</span></div>
+      <div><b>29&thinsp;KB</b><span>GAME, LEVELS, ART AND SOUND</span></div>
+      <div><b>5</b><span>CYCLES A PIXEL &mdash; THE 6502 FLOOR</span></div>
       <div><b>~10.2 fps</b><span>WORLD RENDER</span></div>
-      <div><b>50 Hz</b><span>EVERYTHING YOU FEEL</span></div>
-      <div><b>67/67</b><span>ACCEPTANCE CHECKS</span></div>
+      <div><b>50 Hz</b><span>INPUT, WHATEVER THE RENDERER IS DOING</span></div>
+      <div><b>67/67</b><span>CHECKS, ALL ON PIXELS OR STATE</span></div>
       <div><b>1</b><span>NIGHT TO BUILD</span></div>
     </div>
     <div class="cols" style="margin-top:26px">
-      <div class="card"><h3>SUFFIX LADDERS</h3>
+      <div class="card"><h3>DRAWING A COLUMN IN ONE JUMP</h3>
         <p>Columns are painted by <code>JSR</code>-ing into unrolled store chains at a computed
         offset. The entry point <em>is</em> the run length: no loop counter, no compare per pixel,
         no overdraw. Five cycles a pixel is the floor for a 6502, and this sits on it.</p></div>
-      <div class="card"><h3>THE 50&thinsp;Hz TRICK</h3>
-        <p>The world redraws at ~10.2 fps, but input, the weapon, the kick, the bob, audio and the
+      <div class="card"><h3>WHY 10 FPS FEELS FINE</h3>
+        <p>Two clocks, not one. The world redraws at ~10.2 fps, but input, the weapon, the kick, the bob, audio and the
         HUD all run in the vertical-blank interrupt at 50&thinsp;Hz and never wait. Pull the trigger and
         the gun fires on the <em>next video frame</em>. The parts you feel are never on the slow path.</p></div>
-      <div class="card"><h3>A FLASH THAT CANNOT EXIST</h3>
+      <div class="card"><h3>A FULL-SCREEN FLASH THE MODE CANNOT DO</h3>
         <p>GTIA mode 9 ORs each pixel into the background colour's low nibble — which every
         reference says to keep at zero. Writing a single bit there instead lifts the whole picture:
         a full-screen muzzle flash, four register writes, in a mode with no business having one.</p></div>
@@ -218,29 +218,29 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
 <section>
   <div class="wrap">
-    <h2>THE SAGA</h2>
+    <h2>WHAT REAL HARDWARE TAUGHT US</h2>
     <p class="lead">Built overnight, 31 July 2026, by Claude and Tony Gillett — an experiment in how
     close an 8-bit machine can get to the <em>feel</em> of DOOM, with an emulator harness measuring
     every step. Then it met real hardware.</p>
     <div class="saga">
-      <h3>RUN 1 — IT CORRUPTS AND ROLLS</h3>
+      <h3>ATTEMPT 1 — IT LOADS, AND THE PICTURE IS GARBAGE</h3>
       <p>Three modules lived at $A000–$BFFF: the BASIC ROM's address space on a real XL. The emulator
       boots with BASIC off; the hardware boots with it on. 130 green test runs never stood a chance
       of seeing it. Fixed with an eight-byte stub that banks the ROM out before anything loads.</p>
-      <h3>RUN 2 — THE TITLE APPEARS. STILL ROLLING.</h3>
+      <h3>ATTEMPT 2 — THE TITLE IS PERFECT, AND THE PICTURE ROLLS</h3>
       <p>The display list asked ANTIC for 248 scanlines against a hard limit of 240 — playfield DMA
       running where the vertical sync should be. The emulator renders a fixed window and simply
       clipped it; a CRT rolls. Two of the four status rows were blank anyway. Now 232.</p>
-      <h3>RUN 3 — IT RUNS.</h3>
+      <h3>ATTEMPT 3 — IT BOOTS, LOCKS, AND PLAYS</h3>
       <p>1 August 2026: the fixed build boots, locks and plays on the real 800XL, off an SD card,
       on a CRT. Both fixes are now assertions in the test sweep, and the question they left behind
       is the project's best souvenir: not <em>does it pass?</em> but
       <em>what can this harness not see, even in principle?</em></p>
-      <h3>RUN 4 — AND SO DOES EVERYTHING SINCE.</h3>
+      <h3>AND EVERYTHING BUILT SINCE</h3>
       <p>The bestiary, the knockback, the lava, the redrawn fireballs and masonry that finally
       recedes with distance — all confirmed on the same CRT, including a renderer change and a
       memory reshuffle, the riskiest edits of the lot.</p>
-      <h3>RUN 5 — THE RENDERER CHANGES, CONFIRMED.</h3>
+      <h3>INCLUDING THE RISKY PARTS</h3>
       <p>The mortar courses now follow the <em>perspective of the wall</em> rather than running
       parallel to the horizontal, so they converge toward the vanishing point down a corridor. And
       the <em>hue seam</em> follows the walls: mode 9 allows only one hue per scanline, but the

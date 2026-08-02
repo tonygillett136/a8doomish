@@ -20,38 +20,27 @@
 
 ---
 
-> **Status — runs on real hardware.** Confirmed through v1.6 on a PAL 800XL
-> via a Lotharek SIO2SD, after two bring-up runs each found a bug the
-> emulator could not see:
->
-> **Run 1** on a real PAL 800XL (via a Lotharek SIO2SD): corrupted on load.
-> Three modules live in `$A000–$BFFF`, which is the BASIC ROM on an XL — and the
-> emulator defaults to BASIC *disabled* while the hardware defaults to it
-> *enabled*. Fixed with an INIT segment that clears PORTB bit 1 before those
-> segments load.
->
-> **Run 2**: the title screen renders correctly, and the picture rolls. The
-> display list asked ANTIC for **248 scanlines** against a hard limit of 240, so
-> the last status row was still doing playfield DMA when the vertical sync should
-> have been. Two of the four status rows were blank, so dropping them costs
-> nothing visible and brings the frame to 232. **Run 3 confirmed both fixes: it
-> boots, locks and plays.**
->
-> **Run 5 (v1.6)** confirmed the perspective mortar and the moving hue seam on
-> the CRT — the two changes that had been measured but never seen on real
-> hardware, and both of them renderer changes. Nothing in this document is
-> emulator-only.
->
-> **Run 4 (v1.4)** confirmed the whole feature chain on the CRT — the bestiary,
-> knockback, hurt floors, the redrawn fireballs and the receding masonry — which
-> matters because v1.4 is the first hardware run to include a RENDERER change
-> and a memory reshuffle into the engine tail, the riskiest edit in the batch.
-> Nothing in this document is emulator-only any more.
->
-> Neither bring-up bug was visible to the emulator, for two different reasons: it booted a
-> configuration the hardware doesn't, and it renders a fixed 240-line window so it
-> physically cannot show a CRT losing lock. Both are now asserted by the sweep.
-> That is the standing proof that emulator-measured is not the same as true.
+> **Status — it runs on real hardware.** Confirmed on a PAL Atari 800XL loading
+> from a Lotharek SIO2SD, on a CRT. Getting there took three attempts and taught
+> this project its most useful lesson — that story is
+> [further down](#what-real-hardware-taught-us), not up here.
+
+## What this is
+
+A first-person raycast shooter for an **unexpanded Atari 800XL** — 64 KB, PAL,
+stock hardware, no memory expansion and no cartridge tricks. It draws a shaded
+3D view at about ten frames a second and answers your joystick at the full
+50 Hz regardless of what the renderer is doing. Four levels, four kinds of enemy,
+a shotgun, doors, pickups and a POKEY sound engine, in **29 KB** of 6502
+assembly.
+
+Raycasting on a 1.77 MHz 6502 is mostly a fight about cycles: a full-screen
+repaint costs more than a frame, so every pixel has to be cheap and every wasted
+one has to go. Most of what is interesting here is *how* that fight was won —
+and where it was lost, which is written down just as plainly.
+
+If you just want to see it: **[play it in your browser](https://abyss.gillett-projects.com)**,
+or grab [`abyss.xex`](abyss.xex) and put it on your own machine.
 
 ---
 
@@ -93,7 +82,7 @@ Joystick in port 1. **Fire** starts, and fires. That is the whole control scheme
 
 ## What it does
 
-- **Raycast 3D** in GTIA mode 9 — 80×96 logical over 192 scanlines, 40 ray columns
+- **Raycast 3D** in GTIA mode 9 — 40 rays across an 80×96 buffer, each row shown twice to fill 192 scanlines. Mode 9 gives 16 luminances of a *single* hue per scanline, which shapes everything below.
 - **~10.2 fps** world render, with a **50 Hz feedback layer** that never stalls:
   input, weapon, kick, bob, audio and HUD all run in the VBI, decoupled from the
   renderer. That decoupling is the single thing that makes 10.2 fps feel
@@ -122,17 +111,21 @@ Joystick in port 1. **Fire** starts, and fires. That is the whole control scheme
 The core problem on this machine is that a full-screen repaint costs more than a
 frame. The answer is a chain of small decisions, each measured.
 
-**Suffix ladders.** Each column is painted by `JSR`-ing into an unrolled chain of
-`sta SCREEN+row*40,x` at a computed offset. The wall ladder stores its 96 rows as
+**Unrolled store chains — "suffix ladders", my name for them.** A column of wall
+is a vertical run of identical pixels, and the usual way to draw one is a loop
+with a counter and a compare. Instead, each column is drawn by `JSR`-ing
+*part-way into* a long unrolled run of `sta SCREEN+row*40,x`, entering at an
+offset computed from how tall that column's wall is. The rows are stored as
 symmetric pairs — 0, 95, 1, 94, … — so entering at slot *k* paints exactly rows
-*k..95−k*. The run length is chosen by the entry point: no loop counter, no
-compare per pixel, no overdraw. **5 cycles a pixel**, which is the floor for a
-6502.
+*k* to *95−k* and returns. The run length is chosen by where you jump in: no loop
+counter, no compare per pixel, no overdraw. **5 cycles a pixel, which is the
+floor for a 6502** — you cannot store a byte for less.
 
-**96 buffer rows, each shown twice.** Halves the fill cost. The first version put
-a blank scanline between rows, which halves ANTIC's DMA as well — but the black
-lines dominated the picture, so the DMA saving was traded away and the fill
-saving kept.
+**96 buffer rows, each shown twice.** Halving the vertical resolution halves the
+fill cost, and ANTIC will happily display each row twice for nothing. Putting a
+blank scanline between rows instead would also have halved ANTIC's DMA and given
+the CPU more cycles — but tried, the black lines dominated the picture, so that
+saving was given up and the fill saving kept.
 
 **Gradients baked in as immediate operands.** `lda #$66 / sta SCREEN+r*40,x`
 costs two cycles more per pixel than a constant fill and needs no table fetch,
@@ -156,9 +149,11 @@ because the rows you can actually see span about 1 to 2.5 cells of depth and sqr
 is flattest exactly there. A reciprocal put seven and twelve levels in the same
 rows for the same zero cycles.
 
-**Dark caps outside the hue band.** The wall ladder pairs slot *k* with rows *k*
-and `95−k`, so slots 0–29 are the only ones that can paint outside the 36-row
-wall band — and they were doing it in wall luminance, which is a bright cyan bar
+**Dark caps where a wall leaves its colour band.** Colour in this mode is set
+per horizontal band (see the limitation below), and the wall's band is 36 rows
+tall; a nearer wall is taller than that and spills out of it top and bottom. The
+ladder pairs slot *k* with rows *k* and `95−k`, so slots 0–29 are the only ones
+that can paint outside the band — and they were doing it in wall luminance, which is a bright cyan bar
 above every near wall and a gold one below. Emitting dark immediates for those
 thirty slots removed 764 stray pixels *and* ran faster than the zero-page load it
 replaced.
@@ -226,13 +221,16 @@ A variable moving proves nothing reached the screen.
 
 ## Measured, not claimed
 
-Everything here comes out of `tools/verify.py`, `tools/metrics.py` and
-`tools/gallery.py`, which drive the real binary through libatari800 **in
-process** — no emulator subprocess, nothing to leave running afterwards.
+Everything in this table comes out of three tools that drive the real binary
+through libatari800 **in process** — no emulator subprocess, nothing left running
+afterwards. `tools/verify.py` is the *acceptance sweep*: 67 checks that play the
+game and assert on what comes back, from "the gun is drawn on every level" to a
+full path-finding playthrough. `tools/metrics.py` measures what the picture
+contains; `tools/gallery.py` takes the screenshots.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **67 / 67** |
+| **Acceptance sweep** | **67 / 67** — every one of them asserting on pixels or game state, not on a variable having changed |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | The bestiary, measured | hulk 120→60→0 over exactly two point-blank shots; gunner attacking within 150 frames; hulk 1.23× a husk's height | all sweep checks |
@@ -244,14 +242,47 @@ process** — no emulator subprocess, nothing to leave running afterwards.
 | Randomised soak | 20,000 frames, 5,000 per level from a fresh boot |
 | Passive play | dead in 31 s — was 36–38 s before the enemies moved onto the designer's own positions |
 | Level decompression | 4/4 byte-exact, compared against source after every descent |
-| Audio VBI cost | 693 cycles worst case, 58% of budget |
+| Audio VBI cost | 693 cycles worst case — 58% of what a vertical blank affords |
 | Build reproducibility | byte-identical across consecutive clean builds |
-| Memory boundaries asserted | 15 at assembly time, 9 at generate time |
+| Memory boundaries asserted | 15 at assembly time, 9 at generate time — every fixed address has a guard either side, and each was broken once on purpose to prove it fires |
 | Orphaned processes | none, by construction |
 
 Three of those move between runs — the game's own randomness reaches them — so
 they are quoted as measured ranges. The sweep asserts the *property*, not the
 number.
+
+---
+
+## What real hardware taught us
+
+The emulator was green more than 130 times before this ever reached a CRT. The
+CRT then found two bugs in two attempts — and neither was a mistake the emulator
+*could* have caught, which turned out to be the point.
+
+**Attempt 1 — it loads, and the picture is garbage.** Three modules live in
+`$A000–$BFFF`. On an XL that address range is the BASIC ROM unless you say
+otherwise, and the emulator had been booting with BASIC *disabled* while the
+machine boots with it *enabled*. The program was loading straight into ROM. Fixed
+with an INIT segment that clears PORTB bit 1 before those segments load.
+
+**Attempt 2 — the title screen is perfect, and the picture rolls.** The display
+list was asking ANTIC for **248 scanlines** against a hard limit of 240, so the
+last status row was still doing playfield DMA when vertical sync should have
+been. Two of the four status rows were blank anyway; dropping them costs nothing
+visible and brings the frame to 232.
+
+**Attempt 3 — it boots, locks, and plays.** Two later runs confirmed everything
+built since, including the renderer changes, which are the riskiest kind.
+
+Neither bug was visible to the emulator, for two different reasons worth
+separating. The first was a *configuration* difference — someone could have
+found it by reading a manual. The second was **structural**: the emulator renders
+a fixed 240-line window, so it clips an over-long frame and shows you a stable
+picture. It cannot display a CRT losing lock at any level of diligence.
+
+Both are now assertions in the test sweep. The question they left behind is the
+one this project has found most useful since: not *does it pass?* but **what can
+this harness not see, even in principle?**
 
 ---
 
@@ -261,9 +292,9 @@ Stated plainly, because a prototype that oversells itself is worse than one that
 doesn't.
 
 - ~~Never run on real hardware~~ **It runs on real hardware**, and every feature
-  through v1.4 is CRT-confirmed — see the status note. The two bring-up bugs were
-  both things the emulator cannot observe, which is the most useful thing this
-  project has learned.
+  in it has been seen on a CRT — including the renderer changes, which are the
+  ones most likely to behave differently there. See
+  [what real hardware taught us](#what-real-hardware-taught-us).
 - **No keys or locked doors.** The map format supports them and two levels author
   them, so the level compiler compiles locked doors down to plain ones rather
   than ship levels whose exits cannot be reached.
@@ -285,23 +316,24 @@ doesn't.
 - **One hue per scanline.** GTIA mode 9 gives 16 luminances per pixel but takes
   its hue from `COLBK`, which is per-scanline — so a line holding both wall and
   ceiling must pick one. That part is the mode and cannot be fixed. What *was*
-  fixable: the seams used to sit at rows 30 and 65 permanently, so 44% of a wall
-  two cells away came out in the ceiling's and floor's colours. The seam is now
+  fixable is **where** the picture changes colour. Those boundaries — call them
+  seams — used to sit at rows 30 and 65 permanently, so 44% of a wall two cells
+  away came out in the ceiling's and floor's colours. Each seam is now placed at
   the median wall top, recomputed every render, which puts **99.5%** of a near
   wall in the wall's own hue (measured by hue, on the pixels). Down a corridor it
   is a trade rather than a win — 53.7% to 79.0%, at the cost of some ceiling near
   the horizon taking the wall's hue — because the two side walls disagree about
   where the seam belongs.
-- ~~Wall courses are locked to screen rows, not depth~~ — **FIXED**, after a
-  reviewer spotted it from a screenshot without ever seeing this list. The
-  courses are painted per column at fractions of that column's own wall extent,
-  so they both scale with distance (15 rows near, 6 far, where it was 4
-  everywhere) and **follow the wall's perspective** instead of running parallel
-  to the horizontal — the innermost course sits 11.5 rows from the horizon at
-  the near end of a receding wall and 0.5 at the far end. This *replaced* an
-  earlier fix of four pre-scaled ladder variants, which scaled correctly but
-  drew every course dead level: a suffix ladder is entered at an offset, so a
-  given byte always lands on a fixed screen row. Net −1,077 bytes.
+- ~~The masonry lines on the walls don't recede~~ — **FIXED**, after a visitor
+  spotted it from a screenshot without ever seeing this list. The horizontal
+  lines suggesting courses of stone are now drawn per column, at fractions of
+  that column's own wall height, so they both **scale with distance** (15 screen
+  rows apart on a near wall, 6 on a far one, where it used to be 4 everywhere)
+  and **follow the wall's perspective** rather than running dead level — down a
+  corridor they converge toward the vanishing point. Net −1,077 bytes, and it
+  replaced an earlier, bigger fix that scaled correctly but could never slope,
+  because a store chain entered at an offset always lands a given byte on a fixed
+  screen row.
 
 ---
 
