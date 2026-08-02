@@ -20,33 +20,38 @@ the emulator draws it:
 
 …and nothing else. It sits there unchanging. That is the whole program.
 
-## Round two — what changed
+## Round three — and this is the last one
 
-Round one worked: the staircase came back clean off the CRT, so a mid-scanline
-colour write **does** split a line, and the edges are sharp. What it did not
-settle is how far RIGHT the switch can be pushed before the per-line cycle
-budget runs out.
+Round one worked: the staircase came back clean, so a mid-scanline colour write
+**does** split a line on real hardware and the edges are sharp.
 
-So this build asks for far more delay than a scanline can afford, on purpose.
+Round two overreached. It asked for up to 40 NOPs of delay, which is far more
+than a scanline can afford, so most of its steps overran into a second line and
+the picture came out distorted — unreadable, and my fault.
 
-- **20 steps** instead of 15, each **four cycles** apart instead of two
-- solid **purple marker bands** immediately above and below the staircase, so
-  its steps can be counted from either end (round one's top marker was the same
-  hue as the screen above it, and so invisible)
+That ceiling has since been **measured here, without the CRT**: a step that does
+not fit takes two scanlines instead of one, which makes the whole band taller,
+and scanline counts are something the emulator models exactly. The answer is
+**12 NOPs fits, 14 does not.**
+
+So this build stays inside it: **12 steps, one NOP (two cycles) apart, eight
+scanlines each**, bracketed by the two purple marker bands. Nothing overruns.
 
 ## What to look for
 
-The steps that fit inside a scanline are all the **same height**. The moment a
-step needs more time than a line has, it takes two scanlines instead of one and
-comes out **double height**.
+**Every step should be the same height.** If one is double height, the budget
+calculation was wrong and I want to know.
 
-**The first tall step is the answer.** Everything above it is reachable; nothing
-below is. Together with the ruler that gives me the slope, the reachable window
-and the cliff edge in one picture.
+The measurement is where each step's colour change sits against the ruler. That
+is the last unknown: how many pixels one CPU cycle buys. My reading of round one
+said about 1.2 — which would put the reachable window at a third of the screen —
+but modelling ANTIC's DMA says it could be two or three times that, which would
+be most of the screen. Those give opposite answers on whether the whole idea is
+worth building, so I would rather measure it than pick one.
 
-`docs/calib_reference.png` is this build as the emulator draws it — same layout,
-same marker bands, but with the staircase collapsed into flat horizontal
-stripes, because the emulator cannot draw a mid-line colour change at all.
+`docs/calib_reference.png` is this build as the emulator draws it: same purple
+bands, same ruler, but with the staircase collapsed into two flat blocks because
+the emulator cannot draw a mid-line colour change at all.
 
 **One photograph, straight on, whole screen in frame.** As before: it does not
 play, and if you can move around you have loaded `abyss.xex`.

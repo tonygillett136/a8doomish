@@ -28,7 +28,7 @@ CALIB_M = $50                   ; marker bands -- a THIRD hue, so the strip
                                 ; above the staircase cannot be mistaken for
                                 ; the screen above it, which is also hue A
 CB_TOP  = 40                    ; scanlines skipped from the top of the frame
-CB_LINES = 80                   ; 20 steps of 4 scanlines
+CB_LINES = 96                   ; 12 steps of 8 scanlines
 ; VCOUNT and WSYNC already come from game.asm's DLI section
 
 ; Placement, learned the hard way: buffer B is NOT free. It looks unused in this
@@ -64,19 +64,21 @@ _kal_hud
         inx
         cpx #40
         bne _kal_hud
-        ldx #0                  ; four scanlines per step, twenty steps, each
-        lda #<CSLIDE            ; FOUR cycles longer than the one below it: this
-_kal_step                       ; run deliberately asks for more delay than a
-        ldy #4                  ; scanline can afford, so the picture shows
-_kal_rep                        ; where the budget runs out as well as the slope
+        ldx #0                  ; TWELVE steps of EIGHT scanlines, one NOP --
+        lda #<CSLIDE            ; two cycles -- apart. Twelve because that is the
+_kal_step                       ; measured ceiling: a body with 12 NOPs fits in a
+        ldy #8                  ; scanline and one with 14 does not, so nothing
+_kal_rep                        ; here overruns and every step is the same height.
         sta CTAB,x
         inx
         dey
         bne _kal_rep
         clc
-        adc #2
-        cpx #CB_LINES
-        bne _kal_step
+        .ifndef CALIB_FLAT
+        adc #1
+        .endif                  ; CALIB_FLAT: every line at MAXIMUM delay, so the
+        cpx #CB_LINES           ; band's HEIGHT alone says whether a body with
+        bne _kal_step           ; this many NOPs fits inside a scanline           ; with this many NOPs fits inside a scanline
 _kal_fever
         jsr calib_band
         jmp _kal_fever
@@ -152,7 +154,10 @@ _kal_line
         sta _kal_j+1
 _kal_j    jmp CSLIDE
 CSLIDE
-        .rept 40                ; deliberately far past what a line can afford.
+        .ifndef CALIB_NOPS
+CALIB_NOPS = 12         ; MEASURED ceiling: 12 fits inside a scanline, 14 does
+        .endif          ; not (the band's height doubles). Nothing here overruns.
+        .rept CALIB_NOPS        ; slide length, overridable from the build line
         nop                     ; The steps that overrun take TWO scanlines each
         .endr                   ; and so come out DOUBLE HEIGHT -- which is the
                                 ; measurement: the first tall step is the limit.
