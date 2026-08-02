@@ -2418,3 +2418,63 @@ it for more precision than it has does not give you a rough answer — it gives
 you a confident wrong one.** Three of my four rounds asked the CRT and a phone
 camera for more than they could deliver. The fix each time was to ask for less,
 more clearly.
+
+---
+
+## Built it, measured it, did not ship it
+
+The mid-line hue kernel works. It is not worth its price, and the number that
+says so is not close.
+
+**Whole-view wall/ceiling hue correctness, against v1.6:**
+
+| scene | v1.6 seam | + mid-line kernel |
+|---|---|---|
+| level 1 as it starts | 92.3% | **92.3%** (+0.0) |
+| flat wall, 3 cells | 97.9% | 99.0% (+1.0) |
+| flat wall, 4 cells | 99.0% | 100.0% (+1.0) |
+| wide corridor | 90.5% | 91.9% (+1.4) |
+
+**Cost: 10.40 → 9.40 fps.** A tenth of the frame rate for at most 1.4 points.
+
+The reason is v1.6 itself. The moving seam already took the whole view from
+56–79% to 90–99%, so what remains is thin and scattered, and one split per line
+can only recover part of it. **The predecessor was too good for its successor to
+justify itself.**
+
+Nor does a better version exist. The *theoretical best* single split adds only 3
+further points inside the band (~0.5 across the view); servicing all 96 rows
+instead of 16 would cost ~30% of the frame rate for a few points more; and two
+splits a line — which is what a doorway view actually needs — does not fit in
+58 cycles. Every direction is worse.
+
+### What the build taught anyway
+
+- **A doorway is the common case, and it is the one case a single split cannot
+  help.** Looking through a door the row reads wall│ceiling│wall; one split
+  rescues one wall and loses the other. Measured, the best possible split ties
+  the seam exactly, and a *carelessly chosen* one scored **76% against the
+  seam's 85% — worse than doing nothing.** The fix was to compare the two costs
+  per row and leave the row alone unless the split wins, which makes the kernel
+  never-worse by construction. Any optimisation that can fire when it does not
+  help will eventually fire when it hurts.
+- **`ert` earned its keep twice more.** The zero-page guard caught main.asm's
+  block growing past `$AF`; the new overlap assertion caught `ml_kernel` org'd
+  at `$3370`, exactly on top of `mlon`/`mlrow` at `RAMTAB+880`. The
+  end-of-region guard could not see that — a region can fit perfectly and still
+  be sitting on something. **Guard the start as well as the end.**
+- The kernel itself is sound: 38 fixed cycles plus two a NOP, ten NOPs, 58
+  against a measured 58–61 budget, entry read from a table because computing it
+  cost 23 cycles on its own. If anyone wants it, it is in this commit's history.
+
+### The shape of the whole thread
+
+A question — *can fancy timing beat one colour per line?* — that turned out to
+have three separate answers. **Yes** on real hardware, with clean edges. **No**
+in any emulator available here, which took a cycle-exact rebuild and an upstream
+configure bug to establish. And **not worth it** in this game, which took
+building the thing and measuring it against the version it was meant to beat.
+
+Only the third answer required writing the feature, and only measuring it
+against the incumbent could have produced it. **v1.6 stands.** 67/67,
+byte-identical, nothing shipped.
