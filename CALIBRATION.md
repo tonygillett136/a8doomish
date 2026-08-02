@@ -20,38 +20,39 @@ the emulator draws it:
 
 …and nothing else. It sits there unchanging. That is the whole program.
 
-## Round three — and this is the last one
+## Round four — four big blocks, and why
 
-Round one worked: the staircase came back clean, so a mid-scanline colour write
-**does** split a line on real hardware and the edges are sharp.
+Round one proved it works. Round two overreached and distorted. Round three was
+correct but **too fine to read**: twelve steps a few pixels apart is more than a
+photograph of a CRT can resolve, and my estimates of the slope from it ranged
+over a factor of three. That is on me, not on the pictures.
 
-Round two overreached. It asked for up to 40 NOPs of delay, which is far more
-than a scanline can afford, so most of its steps overran into a second line and
-the picture came out distorted — unreadable, and my fault.
+What your round-three photos *did* settle: the transition marches off the LEFT
+edge well before the twelve steps are used up. So the range **overshoots** the
+screen width rather than falling short of it, the reachable window is most or
+all of the width, and the idea is worth building. My earlier pessimism was an
+artefact of measuring the on-screen part of a range that runs off the edge.
 
-That ceiling has since been **measured here, without the CRT**: a step that does
-not fit takes two scanlines instead of one, which makes the whole band taller,
-and scanline counts are something the emulator models exactly. The answer is
-**12 NOPs fits, 14 does not.**
+So this build asks for something a phone cannot get wrong: **four blocks, each
+24 scanlines tall, eight cycles apart** — 12, 8, 4 and 0 NOPs of delay, top to
+bottom. Four big regions, each with one obvious vertical edge.
 
-So this build stays inside it: **12 steps, one NOP (two cycles) apart, eight
-scanlines each**, bracketed by the two purple marker bands. Nothing overruns.
+- the **gaps** between the four edges give me the slope
+- their **positions** give me the offset
+- and if an edge is missing, that block's transition is off-screen, which is
+  equally informative
+
+Purple marker bands still bracket the whole thing.
 
 ## What to look for
 
-**Every step should be the same height.** If one is double height, the budget
-calculation was wrong and I want to know.
+Four broad horizontal blocks between the purple bands, each split left-to-right
+into blue and dark, with the split at a **different, clearly different** place in
+each block. That is all. No counting of thin stripes.
 
-The measurement is where each step's colour change sits against the ruler. That
-is the last unknown: how many pixels one CPU cycle buys. My reading of round one
-said about 1.2 — which would put the reachable window at a third of the screen —
-but modelling ANTIC's DMA says it could be two or three times that, which would
-be most of the screen. Those give opposite answers on whether the whole idea is
-worth building, so I would rather measure it than pick one.
+`docs/calib_reference.png` is this build as the emulator draws it — the emulator
+cannot draw a mid-line colour change, so its four blocks come out as flat bands
+with no vertical edge at all.
 
-`docs/calib_reference.png` is this build as the emulator draws it: same purple
-bands, same ruler, but with the staircase collapsed into two flat blocks because
-the emulator cannot draw a mid-line colour change at all.
-
-**One photograph, straight on, whole screen in frame.** As before: it does not
-play, and if you can move around you have loaded `abyss.xex`.
+**One photograph, straight on, whole screen in frame.** It does not play; if you
+can move around you have loaded `abyss.xex`.

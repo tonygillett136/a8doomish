@@ -64,20 +64,20 @@ _kal_hud
         inx
         cpx #40
         bne _kal_hud
-        ldx #0                  ; TWELVE steps of EIGHT scanlines, one NOP --
-        lda #<CSLIDE            ; two cycles -- apart. Twelve because that is the
-_kal_step                       ; measured ceiling: a body with 12 NOPs fits in a
-        ldy #8                  ; scanline and one with 14 does not, so nothing
-_kal_rep                        ; here overruns and every step is the same height.
-        sta CTAB,x
-        inx
+        ldx #0                  ; FOUR blocks of 24 scanlines, FOUR NOPs (8
+        lda #<CSLIDE            ; cycles) apart: 12, 8, 4 and 0 NOPs of delay.
+_kal_step                       ; Thin steps proved unreadable in a photograph,
+        ldy #24                 ; so this asks for four big blocks with four
+_kal_rep                        ; obvious vertical edges instead of twelve small
+        sta CTAB,x              ; ones. The GAPS between the edges give the
+        inx                     ; slope; their positions give the offset.
         dey
         bne _kal_rep
         clc
         .ifndef CALIB_FLAT
-        adc #1
-        .endif                  ; CALIB_FLAT: every line at MAXIMUM delay, so the
-        cpx #CB_LINES           ; band's HEIGHT alone says whether a body with
+        adc #4
+        .endif
+        cpx #CB_LINES
         bne _kal_step           ; this many NOPs fits inside a scanline           ; with this many NOPs fits inside a scanline
 _kal_fever
         jsr calib_band
