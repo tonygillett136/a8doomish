@@ -499,7 +499,16 @@ _mbok   sta dist
         jmp _lum_st
 _lum_ew lda SHADE_EW,x
 _lum_st sta wlum
-        pha                     ; the course contrast FADES with distance. The
+        lda matid               ; THE EXIT is the one thing whose brightness
+        and #15                 ; must not fade with range -- a bias only shifts
+        cmp #12                 ; the shade index and the ramp flattens, so the
+        bne _lum_nx             ; door out shouts when you stand on it and
+        lda exitlum             ; whispers when you are looking for it. This is
+        sta wlum                ; an absolute luminance, pulsed by the VBI: the
+        bne _lum_p              ; only moving thing in the world, which is what
+_lum_nx lda wlum                ; makes it unmistakable without giving away
+_lum_p  pha                     ; where it is.
+                                ; the course contrast FADES with distance. The
         lda dist0               ; courses themselves are baked into the ladder at
         lsr                     ; a fixed screen pitch and cannot recede, but a
         lsr                     ; far wall showing no masonry at all is both more

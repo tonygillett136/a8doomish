@@ -193,8 +193,19 @@ def _slope_at(target=8.0):
 _SLOPE = _slope_at()
 MAT_DARKER = {                  # luminance steps darker than the brightest
     0: 0.0,                     #  0 open -- never sampled
-    7: 0.0,                     #  7 glow: a landmark you steer by
+    7: 0.8,                     #  7 glow: a landmark you steer by -- but NOT
+                                #    as bright as the exit. Both were 0.0, which
+                                #    is the cap, so they rendered identically at
+                                #    every distance and "bright" could not mean
+                                #    "out". Measured: 14.0/13.8/10.8/9.6/9.0 for
+                                #    each, byte for byte.
     12: 0.0,                    # 12 exit switch: the brightest thing in a level
+                                #    -- and the renderer now gives it a
+                                #    distance-proof floor as well, because a
+                                #    bias only shifts the shade INDEX and the
+                                #    ramp flattens with range: worth +3.8 steps
+                                #    at three cells and +1.2 at ten, which is
+                                #    backwards from what finding it needs.
     3: 1.2,                     #  3 metal: pale
     5: 1.2,                     #  5 tech: lit panelling
     8: 0.8, 9: 0.8, 10: 0.8, 11: 0.8,     # doors: second only to the exit itself.

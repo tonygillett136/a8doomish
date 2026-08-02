@@ -462,6 +462,21 @@ class Sweep:
         # halves are asserted: that the clock counts real seconds, and that the
         # par shown is DERIVED from the level files rather than typed in, so
         # editing a .lev moves it.
+        # The way out has to be findable, which is not the same as reachable.
+        # Measured before this check existed: the exit stood +3.8 luminance
+        # steps clear of stone at three cells and only +1.2 at ten, because a
+        # material bias shifts the shade INDEX and the ramp flattens with range
+        # -- so it shouted when you were standing on it and whispered when you
+        # were looking for it. It was also byte-identical to the decorative
+        # `glow` material at every distance, so "bright" could not mean "out".
+        # It now has an absolute luminance floor and pulses, and the pulse is
+        # the only moving thing in the world.
+        far, near, lo, hi = self.exit_legibility()
+        self.chk('the way out is legible from across a room',
+                 far >= 2.5 and near > 0 and hi - lo >= 1.5,
+                 '+%.1f luminance steps clear of stone at 8 cells, +%.1f at 2, '
+                 'pulsing %.1f..%.1f' % (far, near, lo, hi))
+
         secs, par, want = self.run_clock_and_par()
         self.chk('the run is timed against the designer\'s par',
                  secs == 12 and par == want,
@@ -742,6 +757,38 @@ class Sweep:
         s.p[WONDONE] = 0
         want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
         return before, after if digits == want else -1
+
+    def exit_legibility(self):
+        """Exit-vs-stone contrast far and near, and the pulse's extent."""
+        import metrics as M
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        for i in range(6):
+            s.p[AC_LIVE + i] = 0
+        m = s.m()
+        px, py = m[PX_HI], m[PY_HI]
+
+        def band(mat, D, samples):
+            for dy in range(-12, 13):
+                for dx in range(1, 16):
+                    s.cell(px + dx, py + dy, mat if dx >= D else 0)
+            s.p[PX_HI], s.p[PX_LO] = px, 0x80
+            s.p[PY_HI], s.p[PY_LO] = py, 0x80
+            s.p[PANG] = 0
+            s.go(30)               # let the scene REDRAW before sampling: the
+            vals = set()           # first frame still shows the previous one
+            for _ in range(samples):
+                s.go(4)
+                L = M.luma(M.grab(s.a))
+                vals.add(sum(L[r][40] for r in range(44, 52)) / 8.0)
+            return vals
+
+        far = min(band(0x0C, 8, 20)) - max(band(0x01, 8, 3))
+        ex2 = band(0x0C, 2, 20)
+        near = min(ex2) - max(band(0x01, 2, 3))
+        return far, near, min(ex2), max(ex2)
 
     def run_clock_and_par(self):
         """Seconds on the clock after a known interval, and the par on the card."""

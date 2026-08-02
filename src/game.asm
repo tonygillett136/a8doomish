@@ -1118,6 +1118,8 @@ runtick  = $7A53                ; 50 Hz frames since the last whole second
 rsec0    = $7A54                ; run time held as THREE DIGITS, units first.
 rsec1    = $7A55                ; Counting this way means no divide anywhere --
 rsec2    = $7A56                ; the end card reads the digits straight out.
+exitph   = $7A57                ; phase of the exit's pulse
+exitlum  = $7A58                ; ...and the luminance the renderer reads
 hudcol   = $7A50                ; status-panel colour, set per level from LVHUEH.
                                 ; Absolute RAM, not ZP: $C2-$CF is full, and
                                 ; game.asm's ZP block ends hard against the
@@ -1495,6 +1497,21 @@ bitmask dta 1,2,4,8
 ; ===========================================================================
         org $32B0
 run_clock
+        ; ---- the exit breathes -------------------------------------------
+        ; Nothing else in this world moves, which is exactly why this works:
+        ; the eye finds it with no HUD, no arrow and no map, and it still says
+        ; nothing about WHERE the exit is until you can already see it. Both
+        ; nibbles must be filled -- one byte is two pixels.
+        inc exitph
+        lda exitph
+        lsr @
+        lsr @
+        lsr @
+        and #7
+        tax
+        lda EXITPULSE,x
+        sta exitlum
+
         lda wonall              ; stops when you are out, so the card reports
         bne _rc_done            ; the run and not how long you admired it
         inc runtick
@@ -1525,4 +1542,10 @@ run_clock
         sta rsec2
 _rc_done
         rts
+EXITPULSE                       ; A breath that never dips below the BRIGHTEST
+                                ; stone. Measured, close stone reaches 10.9, and
+                                ; a trough of 9 made the exit read DARKER than
+                                ; the wall at two cells -- the one range where
+                                ; it had been working. Floor of 12.
+        dta $CC,$DD,$EE,$FF,$FF,$EE,$DD,$CC
         ert * > $3400, "run_clock has grown into ladder set B at $3400"
