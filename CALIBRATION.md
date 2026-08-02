@@ -20,21 +20,33 @@ the emulator draws it:
 
 …and nothing else. It sits there unchanging. That is the whole program.
 
-## The one thing that matters
+## Round two — what changed
 
-The emulator cannot draw a mid-scanline colour change, so in the reference
-picture the red appears as **solid horizontal bands running the full width**.
+Round one worked: the staircase came back clean off the CRT, so a mid-scanline
+colour write **does** split a line, and the edges are sharp. What it did not
+settle is how far RIGHT the switch can be pushed before the per-line cycle
+budget runs out.
 
-On real hardware, if a mid-line colour write works, that red region should
-instead be a **staircase**: fifteen steps, each about six scanlines tall, each
-one starting its red further to the left (or right) than the step below it — a
-ragged diagonal edge down through the red, not a straight vertical one.
+So this build asks for far more delay than a scanline can afford, on purpose.
 
-- **Staircase** → it works. Photograph it; the stripes give me the scale and I
-  can read the delay→pixel mapping straight off the picture.
-- **Flat bands, exactly like the reference** → real hardware does not do it
-  either, and that is the end of the idea. One photo, no weekend lost.
+- **20 steps** instead of 15, each **four cycles** apart instead of two
+- solid **purple marker bands** immediately above and below the staircase, so
+  its steps can be counted from either end (round one's top marker was the same
+  hue as the screen above it, and so invisible)
 
-Either way: **one photograph, straight on, whole screen in frame.** A slow
-shutter (1/50s or slower) avoids catching a partial refresh, but do not worry
-about it too much — two shots at different exposures covers it.
+## What to look for
+
+The steps that fit inside a scanline are all the **same height**. The moment a
+step needs more time than a line has, it takes two scanlines instead of one and
+comes out **double height**.
+
+**The first tall step is the answer.** Everything above it is reachable; nothing
+below is. Together with the ruler that gives me the slope, the reachable window
+and the cliff edge in one picture.
+
+`docs/calib_reference.png` is this build as the emulator draws it — same layout,
+same marker bands, but with the staircase collapsed into flat horizontal
+stripes, because the emulator cannot draw a mid-line colour change at all.
+
+**One photograph, straight on, whole screen in frame.** As before: it does not
+play, and if you can move around you have loaded `abyss.xex`.
