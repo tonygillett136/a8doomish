@@ -1498,9 +1498,16 @@ _ci_loop
         cmp #2                  ; 2/3/4 are the red, blue and yellow keys
         bcc _ci_supply
         sec
-        sbc #2
-        tax
-        lda bitmask,x
+        sbc #2                  ; 0 red, 1 blue, 2 yellow.
+        beq _ci_kr              ; X is the ITEM LOOP COUNTER here. `tax` to
+        cmp #1                  ; index bitmask destroyed it and the loop never
+        beq _ci_kb              ; terminated -- the whole game hung the instant
+        lda #4                  ; you touched a key, which looked from outside
+        bne _ci_kset            ; like the autoplayer refusing to walk. Second
+_ci_kb  lda #2                  ; time this exact mistake bit today: open_last
+        bne _ci_kset            ; carries the cell index in X as well.
+_ci_kr  lda #1
+_ci_kset
         ora keys
         sta keys
         jmp _ci_snd

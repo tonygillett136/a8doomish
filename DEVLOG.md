@@ -2478,3 +2478,122 @@ building the thing and measuring it against the version it was meant to beat.
 Only the third answer required writing the feature, and only measuring it
 against the incumbent could have produced it. **v1.6 stands.** 67/67,
 byte-identical, nothing shipped.
+
+---
+
+## Gameplay: what the levels were already asking for
+
+Tony asked what could improve the *game* rather than the renderer. Rather than
+reach for new mechanics, I read what the four level files ask for and the
+runtime ignores. The `.lev` format turns out to specify a complete design that
+was never wired up:
+
+| authored | in the game before this |
+|---|---|
+| 17 trigger records (`trig ambush group=N`) | never loaded |
+| 20 door records, 14 sealed cells | never open |
+| 14 actors `asleep group=N` behind them | unreachable |
+| a locked door + matching key on two levels | flattened to plain doors |
+| par times: 90 / 150 / 180 / 240 s | unread |
+
+The designer's notes say what they were for. THE RED CISTERN: *"show the locked
+door on the way IN, not on the way back."* THE MAW: *"trying the door and being
+refused. The refusal is the level's first real beat."* Neither beat happened.
+
+### Par times — shipped
+
+The end card now reads `TIME 017  PAR 660`. PARTOTAL is summed from the level
+files at generate time and the digits computed at assembly time, so editing a
+par in a `.lev` moves what the card shows: derived, not typed. The clock is kept
+as **three digits** by the VBI rather than a 16-bit second count, so the end card
+needs no divide -- three increments with a carry, one frame in fifty, clamped at
+999. `run_clock` lives in the RAMTAB gap because game.asm had 53 bytes to the
+display lists and the clock is about 70; its guard said so immediately.
+
+### "Too hard" was a legibility bug, and the sweep was complicit — shipped
+
+Tony reported wandering without finding the exit. Tested rather than assumed:
+**no bug.** All four exits exist and are reachable on foot, 26-64 steps from
+spawn. The sweep's `every level has an exit` was true and useless -- it
+**path-finds with perfect knowledge of the map**. Reachable is not findable, and
+that is the self-fulfilling-test family aimed at level design instead of code.
+
+Measured, the exit was:
+
+- in line of sight from only **13-18%** of a level's open cells (36% in THE MAW),
+  and within the 4-cell range where it looked distinctive from **6-12%**
+- **fading with distance** -- +3.8 luminance steps clear of stone at three cells,
+  +1.2 at ten -- because a material bias shifts the shade INDEX and the ramp
+  flattens with range. It shouted when you stood on it and whispered when you
+  were looking for it.
+- **byte-identical to the decorative glow material at every distance**
+  (14.0/13.8/10.8/9.6/9.0 for both), since both are `MAT_DARKER` 0.0 and 0.0 is
+  the cap. "Bright" could not mean "out".
+
+Three table-level fixes: glow steps back to 0.8; the exit gets an absolute
+luminance immune to the ramp; and it **pulses**, from the 50 Hz layer. Nothing
+else in this world moves, so the eye finds it with no HUD, no arrow and no map --
+and it still says nothing about *where* the exit is until you can already see it.
+The challenge is untouched; only the legibility changed. Now +1.2 steps clear at
+two cells rising to **+5.0 at eight**: the advantage GROWS with range instead of
+collapsing. The pulse floor is 12 because measured stone reaches 10.9 up close,
+and a first attempt with a trough of 9 made the exit read DARKER than the wall at
+two cells -- the one range where it had been working.
+
+### Keys and locked doors — built, measured, NOT shipped
+
+The engine half is done and proven on the real binary:
+
+    keys=0 -> stopped at cell 16, door stays $09          REFUSED
+    keys=1 -> door opens to $00, player walks to cell 18  THROUGH
+
+The compiler places each key at the position its designer chose, ahead of
+supplies, because without it the level cannot be finished.
+
+**The same mistake three times in one sitting, and it is worth naming.** This
+engine carries live state in X across routine boundaries in three places, and I
+clobbered it in all three:
+
+1. `open_last` writes the cell through X, which still holds the index
+   `cell_solid` left there -- its comment literally says *"X must be untouched"*.
+   Indexing `bitmask` with `tax` for the key test opened a cell in the far column
+   of the same row instead of the door, silently, and the door stayed shut.
+2. `check_items` iterates with X. The same `tax` destroyed the loop counter and
+   **hung the whole game** the instant you touched a key -- which from outside
+   looked exactly like the autoplayer refusing to walk, and sent me debugging the
+   harness for an hour. The giveaway was `renders +0`: not a wedged walker, a
+   stopped machine.
+3. and the walker's own stuck-escape, which turned blindly right regardless of
+   where the goal was.
+
+Rule earned: **before using X or Y as a scratch index, find out what the caller
+left there.** A register is an interface.
+
+It is still held back at the compiler, and the reason has narrowed to one thing:
+picking up level 2's red key (type 2, bit 0) leaves the inventory reading **5** --
+bit 0 and bit 2, and bit 2 is level 4's yellow. Inside a single tick, with
+`itmgot` showing exactly one item taken, and both the assembled branches and the
+runtime item tables correct on inspection. Until that is understood a key could
+open a door it never earned, which is worse than having no keys. One loop in
+`levels.py`, clearly marked, is the whole switch-on.
+
+### Harness work banked along the way
+
+- `route()` takes a keys bitmask and treats a coloured door as wall without it --
+  the same rule the player plays by, so it cannot route through a door it has
+  not earned
+- `_exits` computes reachability as a **fixed point**: expand, collect any key
+  within reach, expand again
+- `walk_to()` / `level_keys()` drive the player to an arbitrary cell and read the
+  authored key positions out of `items.inc`
+- both stuck detectors now measure **progress toward the goal** rather than exact
+  position equality (a wedged walker still jitters a fraction of a cell every
+  tick, so equality never accumulated and the escape never fired), and both
+  escapes **back out** before turning, because the key on THE RED CISTERN sits in
+  a one-cell alcove between two columns that a turn-and-push walker can enter and
+  never leave
+
+With those, all four descents complete -- including the one that needs a key.
+
+**69/69.** Triggers and ambushes are next; they need the same descent machinery,
+which now works.

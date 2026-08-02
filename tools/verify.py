@@ -1764,10 +1764,12 @@ class Sweep:
             # re-routing cannot help because the fresh route from a pinned
             # position is the same route. Found when a 6% frame-rate change
             # nudged the trajectory onto that boundary at (24.0, 13.7).
-            pos = (mm[PX_HI], mm[PX_LO], mm[PY_HI], mm[PY_LO])
-            stuck = stuck + 1 if pos == lastpos else 0
-            lastpos = pos
-            if stuck > 10:
+            pos = math.hypot(goal[0] + 0.5 - px, goal[1] + 0.5 - py)
+            if lastpos is None or pos < lastpos - 0.25:
+                lastpos, stuck = pos, 0     # progress, not position equality:
+            else:                           # a wedged walker still jitters
+                stuck += 1
+            if stuck > 25:
                 # Turn TOWARD the next waypoint. A fixed right turn was enough
                 # while the only trap was err settling at exactly 24; with a
                 # locked door in the route the walker wedges at err = -21,
@@ -1777,9 +1779,12 @@ class Sweep:
                 w = int(math.atan2((ty2 + 0.5) - py,
                                    (tx2 + 0.5) - px) / (2 * math.pi) * 256) & 255
                 e = ((w - mm[PANG] + 128) & 255) - 128
-                for _ in range(4):
+                for _ in range(5):      # BACK OUT first. The key on THE RED
+                    self.go_tick(joy=0x02)  # CISTERN sits in a one-cell alcove
+                for _ in range(6):          # between two columns, and a walker
                     self.go_tick(joy=0x08 if e > 0 else 0x04)
-                self.go_tick(joy=0x01)
+                for _ in range(2):          # that only turns-and-pushes can
+                    self.go_tick(joy=0x01)  # never leave a pocket it drove into
                 stuck = 0
                 continue
             if step % 150 == 149:
@@ -1841,10 +1846,16 @@ class Sweep:
                 path, i = fresh, 1
             px = mm[PX_HI] + mm[PX_LO] / 256.0
             py = mm[PY_HI] + mm[PY_LO] / 256.0
-            pos = (mm[PX_HI], mm[PX_LO], mm[PY_HI], mm[PY_LO])
-            stuck = stuck + 1 if pos == lastpos else 0
-            lastpos = pos
-            if stuck > 6:
+            # Progress toward the GOAL, not position equality. The walker
+            # jitters a fraction of a cell every tick while wedged, so exact
+            # equality never accumulated and the escape never fired -- it sat
+            # in the key's alcove on THE RED CISTERN for the whole budget.
+            pos = math.hypot(goal[0] + 0.5 - px, goal[1] + 0.5 - py)
+            if lastpos is None or pos < lastpos - 0.25:
+                lastpos, stuck = pos, 0
+            else:
+                stuck += 1
+            if stuck > 25:
                 # Turn TOWARD the waypoint, not blindly right. The heading
                 # error settles INSIDE the +/-24 forward threshold -- measured
                 # at -21 against a wall on THE RED CISTERN -- so the walker
@@ -1857,9 +1868,12 @@ class Sweep:
                 w = int(math.atan2((ty2 + 0.5) - py2,
                                    (tx2 + 0.5) - px2) / (2 * math.pi) * 256) & 255
                 e = ((w - mm[PANG] + 128) & 255) - 128
-                for _ in range(4):
+                for _ in range(5):      # BACK OUT first. The key on THE RED
+                    self.go_tick(joy=0x02)  # CISTERN sits in a one-cell alcove
+                for _ in range(6):          # between two columns, and a walker
                     self.go_tick(joy=0x08 if e > 0 else 0x04)
-                self.go_tick(joy=0x01)
+                for _ in range(2):          # that only turns-and-pushes can
+                    self.go_tick(joy=0x01)  # never leave a pocket it drove into
                 stuck = 0
                 continue
             while i < len(path) - 1 and \
