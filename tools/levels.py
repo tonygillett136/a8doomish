@@ -441,25 +441,12 @@ class Level:
         whose completability nothing verifies, which is the exact trade this
         project does not make.
 
-        Locked doors are STILL flattened here, and the reason has narrowed a
-        long way. The engine half is done and measured: the red door refuses
-        with an empty inventory and opens with the key, keys survive, the
-        autoplayer fetches one and all four descents complete.
-
-        What is not right is the inventory VALUE. Picking up level 2's red key
-        (type 2, bit 0) leaves `keys` reading 5 -- bit 0 AND bit 2, and bit 2 is
-        level 4's yellow. It happens inside a single tick, with itmgot showing
-        exactly one item taken, and the assembled branches and the runtime item
-        tables are both correct on inspection. So one pickup is setting two
-        bits, and until that is understood a key could open a door it never
-        earned. Shipping that would be worse than not shipping keys at all.
-
-        Delete this loop when the inventory reads 1.
+        Locked doors ship as authored: THE RED CISTERN's red door and THE
+        MAW's yellow one, each with the key its designer placed. They were
+        flattened to plain ones for the game's whole life because the runtime
+        had no keys, which made a locked door indistinguishable from wall.
         """
         out = [self.cells[y][x].mat for y in range(H) for x in range(W)]
-        for i, m in enumerate(out):
-            if m in (MAT['door_red'], MAT['door_blue'], MAT['door_yellow']):
-                out[i] = MAT['door']
         if self.exit:
             ex, ey = self.exit
             out[ey * W + ex] = MAT['exitsw']

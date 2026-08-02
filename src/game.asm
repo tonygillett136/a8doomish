@@ -1531,9 +1531,14 @@ _ci_med lda ai_ph               ; medkit: +25, capped at 100
 _ci_hst sta ai_ph
         sta lasthp              ; do not read the gain as damage
 _ci_snd
-        lda #SND_PICKUP
-        jsr audio_play
-_ci_next
+        txa                     ; audio_play does `tax` -- it takes the sound id
+        pha                     ; in X and does not give it back. X is THIS
+        lda #SND_PICKUP         ; loop's counter, so every pickup left it as 10
+        jsr audio_play          ; and the loop ran on for ~250 iterations over
+        pla                     ; garbage item records. Harmless-looking while
+        tax                     ; a stray type could only ever mean "medkit" --
+_ci_next                        ; then keys arrived and garbage started reading
+                                ; as a yellow key you had never found.
         inx
         cpx #NITEM
         bne _ci_loop

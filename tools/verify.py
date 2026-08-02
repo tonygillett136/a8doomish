@@ -472,6 +472,17 @@ class Sweep:
         # `glow` material at every distance, so "bright" could not mean "out".
         # It now has an absolute luminance floor and pulses, and the pulse is
         # the only moving thing in the world.
+        # A locked door must actually refuse. Two levels have authored one
+        # since they were written -- THE RED CISTERN's red, THE MAW's yellow --
+        # and the compiler flattened them to plain doors for the game's whole
+        # life because the runtime had no keys.
+        blocked, opened, inv = self.locked_door()
+        self.chk('a locked door needs its key', blocked and opened and inv == 1,
+                 'without the key: %s. with it: %s. picking the key up leaves '
+                 'the inventory at %d (want 1)'
+                 % ('refused' if blocked else 'WALKED THROUGH',
+                    'opens' if opened else 'STILL REFUSED', inv))
+
         far, near, lo, hi = self.exit_legibility()
         self.chk('the way out is legible from across a room',
                  far >= 2.5 and near > 0 and hi - lo >= 1.5,
@@ -758,6 +769,50 @@ class Sweep:
         s.p[WONDONE] = 0
         want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
         return before, after if digits == want else -1
+
+    def locked_door(self):
+        """Refused without the key, opens with it, and one key sets one bit."""
+        solid = open('src/map2.bin', 'rb').read()
+        doors = [(i % 32, i // 32) for i, v in enumerate(solid) if v == 0x09]
+        if not doors:
+            return False, False, 0
+        dx, dy = doors[0]
+        out = []
+        for withkey in (False, True):
+            s = Sweep(self.xex)
+            s.a.frame(80)
+            s.pull_trigger()
+            s.a.frame(200)
+            s.descend()                      # onto THE RED CISTERN
+            for i in range(6):
+                s.p[AC_LIVE + i] = 0
+            s.p[KEYSHELD] = 1 if withkey else 0
+            s.p[PX_HI], s.p[PX_LO] = dx - 2, 0x80
+            s.p[PY_HI], s.p[PY_LO] = dy, 0x80
+            s.p[PANG] = 0
+            s.go(6)
+            for _ in range(60):
+                s.go(2, joy=0x01)            # FORWARD. 0x08 turns; it does not
+            out.append(s.m()[PX_HI] > dx)    # walk, which cost an hour once
+        # ...and the inventory, which is the half that was silently wrong:
+        # audio_play takes the sound id in X and does not give it back, so
+        # every pickup left check_items' loop counter at 10 and the loop ran on
+        # over garbage records. A stray byte reading as a yellow key handed you
+        # one you had never found.
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        s.descend()
+        m = s.m()
+        keys = s.level_keys(m[LEVELNO])
+        if not keys:
+            return (not out[0]), out[1], 0
+        kx, ky, kt = keys[0]
+        s.p[PX_HI], s.p[PX_LO] = kx, 0x80
+        s.p[PY_HI], s.p[PY_LO] = ky, 0x80
+        s.go(15)
+        return (not out[0]), out[1], s.m()[KEYSHELD]
 
     def exit_legibility(self):
         """Exit-vs-stone contrast far and near, and the pulse's extent."""
@@ -1409,7 +1464,14 @@ class Sweep:
             if not found:
                 return False, shots, deaths
             goal = found[0]
-            path = s.route(grid, (m[PX_HI], m[PY_HI]), goal)
+            # A locked door means fetching its key first -- the level's point,
+            # not an obstacle. Same rule the player plays by.
+            if s.route(grid, (m[PX_HI], m[PY_HI]), goal, m[KEYSHELD]) is None:
+                for kx, ky, kt in s.level_keys(m[LEVELNO]):
+                    s.walk_to((kx, ky), s.m()[KEYSHELD])
+                m = s.m()
+                grid = bytes(m[MAPBASE:MAPBASE + 0x400])
+            path = s.route(grid, (m[PX_HI], m[PY_HI]), goal, m[KEYSHELD])
             if path is None:
                 return False, shots, deaths
             i = 1
@@ -1425,7 +1487,7 @@ class Sweep:
                     s.pull_trigger(); s.go(40)
                     m = s.m()
                     path = s.route(bytes(m[MAPBASE:MAPBASE + 0x400]),
-                                   (m[PX_HI], m[PY_HI]), goal)
+                                   (m[PX_HI], m[PY_HI]), goal, m[KEYSHELD])
                     i = 1
                     if path is None:
                         return False, shots, deaths
