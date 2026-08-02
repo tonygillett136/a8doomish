@@ -495,6 +495,12 @@ class Sweep:
                  % ('refused' if blocked else 'WALKED THROUGH',
                     'opens' if opened else 'STILL REFUSED', inv))
 
+        dead, escaped = self.keys_clear_per_run()
+        self.chk('a new run starts empty-handed',
+                 dead == 0 and escaped == 0,
+                 'keys after dying: %d. keys on the run after escaping: %d '
+                 '(want 0 and 0)' % (dead, escaped))
+
         far, near, lo, hi = self.exit_legibility()
         self.chk('the way out is legible from across a room',
                  far >= 2.5 and near > 0 and hi - lo >= 1.5,
@@ -846,6 +852,42 @@ class Sweep:
         s.p[PY_HI], s.p[PY_LO] = ky, 0x80
         s.go(15)
         return (not out[0]), out[1], s.m()[KEYSHELD]
+
+    def keys_clear_per_run(self):
+        """A new run starts empty-handed -- after death, and after victory.
+
+        `keys` lives in the $7A00 page that game_init wipes ONCE at boot, so it
+        was cleared per SESSION, not per run. The red ring you found on THE RED
+        CISTERN stayed on your belt through dying, through escaping, and into
+        every game you started afterwards, standing the locked doors open on a
+        run that had not earned them. Nothing caught it because every other
+        check in this file boots a fresh machine, which is the one condition
+        under which the bug cannot appear.
+        """
+        # --- after death
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        s.descend()
+        s.p[KEYSHELD] = 7
+        s.p[HEALTH] = 0
+        s.go(20)
+        s.pull_trigger()
+        s.go(30)
+        after_death = s.m()[KEYSHELD]
+
+        # --- after escaping, on the run you start from the end card
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(60)
+        for _ in range(4):
+            s.descend()
+        s.p[KEYSHELD] = 7
+        s.pull_trigger()
+        s.go(60)
+        return after_death, s.m()[KEYSHELD]
 
     def exit_legibility(self):
         """Exit-vs-stone contrast far and near, and the pulse's extent."""
@@ -1519,6 +1561,16 @@ class Sweep:
                     deaths += 1
                     s.pull_trigger(); s.go(40)
                     m = s.m()
+                    # Dying restarts the whole floor -- shut doors, respawned
+                    # items, EMPTY HANDS. So the retry has to go and find the
+                    # key again, exactly as the player does. This branch used
+                    # to just re-route and had never once had to: keys survived
+                    # death, so the door stayed open and the path stayed valid.
+                    if s.route(bytes(m[MAPBASE:MAPBASE + 0x400]),
+                               (m[PX_HI], m[PY_HI]), goal, m[KEYSHELD]) is None:
+                        for kx, ky, kt in s.level_keys(m[LEVELNO]):
+                            s.walk_to((kx, ky), s.m()[KEYSHELD])
+                        m = s.m()
                     path = s.route(bytes(m[MAPBASE:MAPBASE + 0x400]),
                                    (m[PX_HI], m[PY_HI]), goal, m[KEYSHELD])
                     i = 1
@@ -1541,7 +1593,8 @@ class Sweep:
                     s.go(10, joy=0x08)          # turn off the wall...
                     s.go(8, joy=0x01)           # ...and shuffle clear
                     fresh = s.route(bytes(s.m()[MAPBASE:MAPBASE + 0x400]),
-                                    (s.m()[PX_HI], s.m()[PY_HI]), goal)
+                                    (s.m()[PX_HI], s.m()[PY_HI]), goal,
+                                    s.m()[KEYSHELD])
                     if fresh:
                         path, i = fresh, 1
                     stuck = 0
@@ -1571,7 +1624,7 @@ class Sweep:
                     continue
                 if step % 150 == 149:
                     fresh = s.route(bytes(m[MAPBASE:MAPBASE + 0x400]),
-                                    (m[PX_HI], m[PY_HI]), goal)
+                                    (m[PX_HI], m[PY_HI]), goal, m[KEYSHELD])
                     if fresh:
                         path, i = fresh, 1
                 while i < len(path) - 1 and \

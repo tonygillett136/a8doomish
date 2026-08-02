@@ -2703,3 +2703,89 @@ halt (60 ticks, no advance), and that the banner names the key. Either half alon
 would pass a broken game.
 
 **71/71.**
+
+---
+
+## The manual, and the two things writing it found
+
+Tony: *"I think we need to write up game instructions, for players to read!"*
+
+Fair. The game had, until yesterday, a floor-cleared banner that did not say
+what it wanted; the deeper version of that problem is that nothing anywhere
+said what the shotgun does, why you should walk into a monster's face, or that
+a click means a key rather than a wall.
+
+So: [`docs/PLAYING.md`](docs/PLAYING.md), and a HOW TO PLAY section on the site
+for the people who arrive at the browser build and start pressing things.
+
+Writing it meant reading the game rather than remembering it, and that turned
+up two defects and a lie.
+
+### 1. Keys were cleared per SESSION, not per run
+
+`keys` lives in the `$7A00` page that `game_init` wipes **once, at boot**.
+Nothing else ever touched it. So the red ring you found on THE RED CISTERN
+stayed on your belt through dying, through escaping, and into every game you
+started afterwards — the locked doors stood open on a run that had not earned
+them. The comment beside the variable said *"cleared per RUN"*. It had never
+been true.
+
+One instruction in `restart_level`, which both the death retry and the
+victory restart pass through.
+
+Why 71 checks missed it: **every one of them boots a fresh machine**, which is
+the single condition under which the bug cannot appear. A test suite that
+always starts clean cannot see state that fails to reset.
+
+Before shipping it I checked the obvious way to make this a soft-lock — die on
+a floor whose exit is behind a locked door, and lose the key you needed. It
+isn't one, and the reason is in the level design rather than the code: every
+locked floor carries its own key, so the retry can always fetch it again.
+Measured on the running machine, not reasoned about:
+
+```
+THE RED CISTERN  key before death=1  after retry=0  recovered=1  exit reachable: yes (38 steps)
+THE MAW          key before death=5  after retry=0  recovered=4  exit reachable: yes (33 steps)
+```
+
+That fix then broke `the game can be completed`, and correctly: the autoplayer
+re-routed after dying but never went back for the key, because until now it had
+never had to. It does now. The sweep's own re-route calls were also passing
+`keys=0` implicitly — harmless while keys were immortal, wrong the moment they
+weren't.
+
+**72/72.**
+
+### 2. The site described monsters the game does not place
+
+`THE DESCENT` promised *"spitters that never stop"* and *"hulks"*, plural. The
+spawn table says otherwise, and the spawn table is what runs:
+
+| floor | what is actually there |
+|---|---|
+| THE VESTIBULE | 5 husks |
+| THE RED CISTERN | 3 husks, 2 gunners |
+| SILENT COLONNADE | 3 husks, 2 gunners |
+| THE MAW | 2 husks, 2 gunners, **1 hulk** |
+
+There are no spitters in the shipped game, and exactly one hulk in the whole
+descent — which is a better fact than the one the copy invented. The bestiary
+screenshot was captioned *"a hulk towers over a husk in THE RED CISTERN"*, a
+floor that has no hulk on it: the shot predates typed monsters entirely, from
+when the engine had one enemy and the levels' types were discarded.
+
+Recaptured the real thing — the actual hulk, three cells away on THE MAW, with
+`AC_TYPE` asserted at the moment of capture, the same rule `gallery.py` already
+applies to everything else. The caption now says what the picture shows.
+
+### What both have in common
+
+Neither is a coding error. Both are **claims that stopped tracking the code** —
+a comment that described intent, and marketing copy written when the engine
+had one enemy. The code moved; the words did not.
+
+Which is the argument for writing the manual at all. Documentation for players
+is the one document you cannot write from memory, because it has to describe
+what the machine does rather than what you meant it to do. Two rounds of
+adversarial visual review and 71 green checks did not find these. *Writing down
+how to play* found both in an afternoon.

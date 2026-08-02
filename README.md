@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
   <img src="https://img.shields.io/badge/binary-29%2C606%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-71%2F71-2e7d32">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-72%2F72-2e7d32">
 </p>
 
 ---
@@ -72,6 +72,11 @@ Grab [`abyss.xex`](abyss.xex) and load it however you load an XEX — an SD
 cartridge, an SIO2SD, `atari800 abyss.xex`, Altirra, anything.
 
 Joystick in port 1. **Fire** starts, and fires. That is the whole control scheme.
+
+**New to it?** [**`docs/PLAYING.md`**](docs/PLAYING.md) is the player's manual —
+controls, what the shotgun does at each range, how doors and keys work, and how
+to recognise the way out. Two minutes, and it is the difference between wandering
+and descending.
 
 - **PAL 800XL/130XE, 64K.** It has only ever been run on PAL.
 - BASIC is disabled by the program itself now, so you should not need to hold
@@ -230,7 +235,7 @@ contains; `tools/gallery.py` takes the screenshots.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **67 / 67** — every one of them asserting on pixels or game state, not on a variable having changed |
+| **Acceptance sweep** | **72 / 72** — every one of them asserting on pixels or game state, not on a variable having changed |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | The bestiary, measured | hulk 120→60→0 over exactly two point-blank shots; gunner attacking within 150 frames; hulk 1.23× a husk's height | all sweep checks |
@@ -343,7 +348,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 71-point acceptance sweep, in process
+python3 tools/verify.py        # 72-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```
@@ -377,7 +382,7 @@ Level sources are plain ASCII in [`levels/`](levels/) and compile via
 src/            6502 sources — engine, game layer, sprites, actor AI, audio, title
 tools/          the level compiler, the art generators, and the three harnesses
 levels/         the four levels, as ASCII maps you can read and edit
-docs/           map format, and the frozen interface contract the agents built to
+docs/           the player's manual, the map format, and the frozen interface contract
 gallery/        the screenshots in this README, each asserted against game state
 builds/         fifteen milestone binaries, in the order they were built
 abyss.xex       the thing you run

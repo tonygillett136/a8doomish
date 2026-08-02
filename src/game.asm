@@ -1265,6 +1265,14 @@ _rl_go2                         ; the victory restart joins here, having
         sta itmgot
         sta wonall
         sta kills               ; a fresh run earns its own tally
+        sta keys                ; ...and earns its own keys. This was cleared
+                                ; only by the boot-time wipe of $7A00, so the
+                                ; ring you found on THE RED CISTERN stayed on
+                                ; your belt through death, through victory, and
+                                ; into every later run of the same session --
+                                ; the red and yellow doors simply stood open on
+                                ; a game you had just started. Invisible to the
+                                ; sweep, which boots a fresh machine per check.
         lda #100
         sta ai_ph
         sta lasthp

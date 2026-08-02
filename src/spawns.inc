@@ -4,19 +4,19 @@ NSPAWN = 5
         org $2B80               ; between the level blob and the level tables
 SPWNX
         dta 23,16,24,24,25
-        dta 11,26,16,17,6
+        dta 11,16,17,6,11
         dta 9,20,26,12,8
-        dta 7,24,27,12,24
+        dta 7,27,6,14,24
 SPWNY
         dta 10,22,22,18,13
-        dta 14,16,27,3,7
+        dta 14,27,3,7,25
         dta 21,5,27,16,19
-        dta 6,27,7,18,18
+        dta 6,7,9,12,13
 SPWNT
         dta 1,1,1,1,1
-        dta 1,5,3,3,1
+        dta 1,3,3,1,1
         dta 1,1,1,3,3
-        dta 3,1,3,4,4
+        dta 3,3,5,1,1
 LVPAR
         dta 90,150,180,240
 PARTOTAL = 660           ; 90 + 150 + 180 + 240

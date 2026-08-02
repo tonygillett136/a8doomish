@@ -109,6 +109,15 @@ h2::before{content:"// ";color:var(--dim)}
 .card h3{color:var(--teal);font-size:16px;letter-spacing:.08em;margin-bottom:10px}
 .card p{font-size:14.5px;color:#c8bbaa}
 .card code{color:var(--gold);background:#241b18;padding:0 5px;border-radius:3px;font-size:13px}
+/* ---- manual ---- */
+.cols.manual{grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr))}
+.card table{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
+.card table td{padding:5px 0;border-top:1px solid var(--line);color:#c8bbaa;vertical-align:top}
+.card table tr:first-child td{border-top:none}
+.card table td:last-child{text-align:right;color:var(--ink);padding-left:12px}
+.card kbd{color:var(--ink);background:#241b18;padding:1px 7px;border:1px solid var(--line);
+          border-radius:3px;font-size:12.5px;font-family:inherit}
+.card .note{margin-top:12px;font-size:13.5px;color:var(--dim)}
 .saga{border-left:3px solid var(--stone);padding-left:22px;margin-top:20px}
 .saga h3{color:var(--stone);letter-spacing:.06em;font-size:15px;margin:18px 0 4px}
 .saga p{font-size:14.5px;color:#c8bbaa;max-width:75ch}
@@ -126,6 +135,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
   <div class="cta">
     <a class="btn primary" href="#play">&#9654;&#xFE0E; PLAY IN YOUR BROWSER</a>
     <a class="btn" href="emu/abyss.xex" download>&#8681;&#xFE0E; GET THE XEX</a>
+    <a class="btn" href="#howto">HOW TO PLAY</a>
     <a class="btn" href="https://github.com/tonygillett136/a8doomish">SOURCE</a>
   </div>
 </header>
@@ -133,7 +143,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <section id="play">
   <div class="wrap">
     <h2>PLAY</h2>
-    <p class="lead">This is the real game — byte-for-byte the same 29,606-byte executable that runs
+    <p class="lead">This is the real game — byte-for-byte the same 29,609-byte executable that runs
     on the hardware, here running in an Atari 800XL emulator compiled to WebAssembly. PAL, with
     sound: an audio engine that for most of this game's life was verified only as POKEY register
     traces, never actually heard.</p>
@@ -163,20 +173,82 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
   </div>
 </section>
 
+<section id="howto">
+  <div class="wrap">
+    <h2>HOW TO PLAY</h2>
+    <p class="lead">You are somewhere under the world with a shotgun and no map. Four floors lie below
+    you, each with one way down, and the way down is the only way on. There is no strafe, no run key,
+    no automap and no use key — doors open because you walked into them. Everything you need is here;
+    the <a href="https://github.com/tonygillett136/a8doomish/blob/main/docs/PLAYING.md">full manual</a>
+    has the rest.</p>
+    <div class="cols manual">
+
+      <div class="card"><h3>THE CONTROLS</h3>
+        <table>
+          <tr><td>Walk forward / back</td><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd> or <kbd>W</kbd> <kbd>S</kbd></td></tr>
+          <tr><td>Turn</td><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>A</kbd> <kbd>D</kbd></td></tr>
+          <tr><td>Fire</td><td><kbd>SPACE</kbd> or <kbd>X</kbd></td></tr>
+          <tr><td>On a real Atari</td><td>joystick, port 1</td></tr>
+        </table>
+        <p class="note">Fire is also the carry-on button — it starts the game, clears every banner and
+        restarts you when you die. Whenever the game is waiting, it is waiting for fire, and it says so
+        on screen.</p>
+      </div>
+
+      <div class="card"><h3>THE SHOTGUN — GET CLOSE</h3>
+        <table>
+          <tr><td>Two cells or less</td><td>60 damage</td></tr>
+          <tr><td>Three to five cells</td><td>28 damage</td></tr>
+          <tr><td>Further than that</td><td>12 — a peppering</td></tr>
+        </table>
+        <p class="note">The same shell is <b>five times deadlier at point-blank</b>. A husk takes one
+        blast in the face or five across a room; the hulk takes two, or ten. Backing away and plinking
+        is the most expensive way to kill anything here. And every shot is loud: it wakes whatever is
+        within three cells.</p>
+      </div>
+
+      <div class="card"><h3>DOORS, KEYS AND THE WAY OUT</h3>
+        <p>Doors open when you walk into them — there is a deliberate beat before you step through.
+        Locked doors are coloured, and answer with a <b>latch click</b> rather than the sound of a door.
+        That click means <i>you need a key</i>, not <i>this is a wall</i> — and the key is always
+        somewhere on the floor you are already standing on.</p>
+        <p class="note">The exit is a doorway that <b>breathes</b>. Nothing else in this world moves by
+        itself, so it is unmistakable once it is in front of you. Walk onto it, the status line changes
+        to <code>FIRE TO DESCEND</code>, and the trigger drops you a floor.</p>
+      </div>
+
+      <div class="card"><h3>DYING, SUPPLIES AND PAR</h3>
+        <table>
+          <tr><td>Medkit</td><td>+25 health, max 100</td></tr>
+          <tr><td>Shells</td><td>+15, max 99</td></tr>
+          <tr><td>Par for the whole descent</td><td>11:00</td></tr>
+        </table>
+        <p class="note">Dying puts you back at the start of the floor you died on — doors shut, items
+        back, empty hands, full health. The asymmetry that decides runs: <b>health follows you down,
+        ammunition does not.</b> Every floor hands you a fresh 50 shells whatever you had left, so
+        hoarding them is throwing them away — but nothing heals you between floors, and a medkit you
+        walked past on the first floor is health you do not have on the fourth.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 <section>
   <div class="wrap">
     <h2>THE DESCENT</h2>
-    <p class="lead">Four hand-authored floors, each casting its own monsters: husks that fall to one
-    point-blank blast, fragile gunners that fire twice as often, spitters that never stop, and
-    hulks that soak exactly two shells and tower a third taller — every one placed, and typed, by
-    the level files. A shotgun with range-banded damage, a muzzle flash that lights the room rather
-    than replacing it, and a real exit on every floor, proven reachable by a test that walks there.</p>
+    <p class="lead">Four hand-authored floors, five monsters apiece, every one placed and typed by the
+    level files. THE VESTIBULE is husks only — one point-blank blast each. Gunners, frailer but quicker
+    on the trigger, start on the second floor. The single hulk waits at the bottom: two shells up close,
+    ten from across a room, and a third taller than anything above it. A shotgun with range-banded
+    damage, a muzzle flash that lights the room rather than replacing it, and a real exit on every
+    floor, proven reachable by a test that walks there.</p>
     <div class="shots">
       <figure><img src="img/02_vestibule.png" alt="The Vestibule"><figcaption><b>THE VESTIBULE</b> — teal vault, red stone, gold floor</figcaption></figure>
       <figure><img src="img/08_red_cistern.png" alt="The Red Cistern"><figcaption><b>THE RED CISTERN</b> — a columned hall in magenta</figcaption></figure>
       <figure><img src="img/09_silent_colonnade.png" alt="Silent Colonnade"><figcaption><b>SILENT COLONNADE</b> — grey stone under a blue vault</figcaption></figure>
       <figure><img src="img/10_the_maw.png" alt="The Maw"><figcaption><b>THE MAW</b> — violet stone, burning red sky</figcaption></figure>
-      <figure><img src="img/12_hulk.png" alt="A hulk towering over a husk"><figcaption><b>THE BESTIARY</b> — a hulk towers over a husk in THE RED CISTERN. Two shells for the big one; it stays where it dies.</figcaption></figure>
+      <figure><img src="img/12_hulk.png" alt="A hulk on THE MAW"><figcaption><b>THE HULK</b> — the one at the bottom, three cells away on THE MAW. Two shells at this range, ten from across the room; it stays where it dies.</figcaption></figure>
       <figure><img src="img/05_muzzleflash.png" alt="Muzzle flash"><figcaption><b>THE FLASH</b> — each band keeps its hue; the thing you shot at stays visible</figcaption></figure>
     </div>
   </div>
@@ -192,7 +264,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
       <div><b>5</b><span>CYCLES A PIXEL &mdash; THE 6502 FLOOR</span></div>
       <div><b>~10.2 fps</b><span>WORLD RENDER</span></div>
       <div><b>50 Hz</b><span>INPUT, WHATEVER THE RENDERER IS DOING</span></div>
-      <div><b>71/71</b><span>CHECKS, ALL ON PIXELS OR STATE</span></div>
+      <div><b>72/72</b><span>CHECKS, ALL ON PIXELS OR STATE</span></div>
       <div><b>1</b><span>NIGHT TO BUILD</span></div>
     </div>
     <div class="cols" style="margin-top:26px">
@@ -245,7 +317,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
       parallel to the horizontal, so they converge toward the vanishing point down a corridor. And
       the <em>hue seam</em> follows the walls: mode 9 allows only one hue per scanline, but the
       seams no longer sit at fixed rows, so 99.5% of a near wall carries the wall's own colour
-      instead of 56%. Both were measured first — 67/67 — and both are now confirmed on the CRT.
+      instead of 56%. Both were measured before they were believed, and both are now confirmed on the CRT.
       Nothing on this page is emulator-only.</p>
     </div>
   </div>
@@ -253,7 +325,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
 <footer>
   <div class="wrap">
-    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (29,606 bytes)</span>
+    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (29,609 bytes)</span>
     <span>Built by <a href="https://claude.com/claude-code">Claude Code</a> with Tony Gillett.
     Not affiliated with id Software; DOOM is a trademark of id Software LLC.</span>
   </div>
