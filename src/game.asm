@@ -106,6 +106,8 @@ _notrig
         lda #0
         sta trigprv
 _trigdone
+        jsr run_clock           ; body is in the RAMTAB gap: game.asm has 53
+                                ; bytes to $4000 and the clock is ~70
         lda vx_lo               ; walking? advance the weapon bob. Any motion
         ora vx_hi               ; at all counts -- the velocity is 8.8 signed
         ora vy_lo               ; and we only care that it is non-zero.
@@ -1112,6 +1114,10 @@ painfl   = $7A06
 wondone  = $7A07                ; 1 once the exit has been reached
 deathfr  = $7A51                ; frames since death, drives the weapon drop
 kills    = $7A52                ; husks put down this run; the end card shows it
+runtick  = $7A53                ; 50 Hz frames since the last whole second
+rsec0    = $7A54                ; run time held as THREE DIGITS, units first.
+rsec1    = $7A55                ; Counting this way means no divide anywhere --
+rsec2    = $7A56                ; the end card reads the digits straight out.
 hudcol   = $7A50                ; status-panel colour, set per level from LVHUEH.
                                 ; Absolute RAM, not ZP: $C2-$CF is full, and
                                 ; game.asm's ZP block ends hard against the
@@ -1475,3 +1481,48 @@ bitmask dta 1,2,4,8
 
 ; The game layer runs up against the display lists at $4000.
         ert * > $4000, "game.asm has grown into the display lists at $4000"
+
+; ===========================================================================
+; run_clock -- one second of run time, as three digits.
+;
+; In the gap between the RAMTAB tables and ladder set B, because game.asm is
+; full to the display lists and its guard says so. Digits rather than a 16-bit
+; count of seconds, so the end card needs no divide: three increments with a
+; carry, on one frame in fifty.
+;
+; Every level has carried a par time since the levels were authored -- 90, 150,
+; 180, 240 seconds -- and nothing read them until now.
+; ===========================================================================
+        org $32B0
+run_clock
+        lda wonall              ; stops when you are out, so the card reports
+        bne _rc_done            ; the run and not how long you admired it
+        inc runtick
+        lda runtick
+        cmp #50
+        bcc _rc_done
+        lda #0
+        sta runtick
+        inc rsec0
+        lda rsec0
+        cmp #10
+        bcc _rc_done
+        lda #0
+        sta rsec0
+        inc rsec1
+        lda rsec1
+        cmp #10
+        bcc _rc_done
+        lda #0
+        sta rsec1
+        inc rsec2
+        lda rsec2
+        cmp #10
+        bcc _rc_done
+        lda #9                  ; 999 and holding: three digits is the budget
+        sta rsec0
+        sta rsec1
+        sta rsec2
+_rc_done
+        rts
+        ert * > $3400, "run_clock has grown into ladder set B at $3400"

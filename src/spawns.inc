@@ -17,4 +17,7 @@ SPWNT
         dta 1,5,3,3,1
         dta 1,1,1,3,3
         dta 3,1,3,4,4
+LVPAR
+        dta 90,150,180,240
+PARTOTAL = 660           ; 90 + 150 + 180 + 240
         ert * > $2BC0, "spawn tables have grown into the level tables at $2BC0"

@@ -456,6 +456,18 @@ class Sweep:
         # colours and the surface read as three different materials. The seam is
         # now the median wall top, recomputed per render. Measured on the pixels
         # themselves, by hue: the shipped v1.5 binary reads 56% here.
+        # The par times were written into every .lev when the levels were
+        # authored -- 90, 150, 180, 240 seconds -- and nothing read them for the
+        # game's whole life. The end card now reports the run against them. Both
+        # halves are asserted: that the clock counts real seconds, and that the
+        # par shown is DERIVED from the level files rather than typed in, so
+        # editing a .lev moves it.
+        secs, par, want = self.run_clock_and_par()
+        self.chk('the run is timed against the designer\'s par',
+                 secs == 12 and par == want,
+                 '%ds on the clock after 600 frames (want 12), par shown %d, '
+                 'level files say %d' % (secs, par, want))
+
         near, corr = self.wall_hue_fidelity()
         self.chk('walls are painted in the wall hue', near >= 95 and corr >= 70,
                  '%.0f%% of a near wall and %.0f%% of a receding one carry the '
@@ -730,6 +742,27 @@ class Sweep:
         s.p[WONDONE] = 0
         want = bytes(16 + int(d) for d in '%03d' % after)   # internal charset
         return before, after if digits == want else -1
+
+    def run_clock_and_par(self):
+        """Seconds on the clock after a known interval, and the par on the card."""
+        import struct
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(200)
+        base = s.m()
+        b0 = base[0x7A56] * 100 + base[0x7A55] * 10 + base[0x7A54]
+        s.a.frame(600)                       # 12 seconds at 50 Hz
+        m = s.m()
+        secs = (m[0x7A56] * 100 + m[0x7A55] * 10 + m[0x7A54]) - b0
+        s.p[WONALL] = 1                      # the run is over: show the card
+        s.go(30)
+        m = s.m()
+        par = 0
+        for i in range(3):
+            par = par * 10 + (m[HUDRAM + 80 + 16 + i] - 16)
+        want = sum(open('src/map%d.lev.bin' % n, 'rb').read()[13] for n in (1, 2, 3, 4))
+        return secs, par, want
 
     def wall_hue_fidelity(self):
         """Percentage of wall pixels actually carrying the wall's hue.

@@ -187,6 +187,29 @@ _vm     lda vstat_msg,x
         lda ammo                ; shells left, at columns 28-30
         ldx #28
         jsr hud_num
+        ; ---- the run against the designer's par ---------------------------
+        ; Every level has carried a par time since it was authored and nothing
+        ; read them. The clock is kept as three digits by the VBI so there is
+        ; no divide here, and PARTOTAL comes from the level data at assembly
+        ; time -- change a par in a .lev and this follows.
+        lda rsec2
+        clc
+        adc #16                 ; internal charset: '0' is 16
+        sta HUDRAM+80+7
+        lda rsec1
+        clc
+        adc #16
+        sta HUDRAM+80+8
+        lda rsec0
+        clc
+        adc #16
+        sta HUDRAM+80+9
+        lda #16+[PARTOTAL/100]
+        sta HUDRAM+80+16
+        lda #16+[[PARTOTAL/10]%10]
+        sta HUDRAM+80+17
+        lda #16+[PARTOTAL%10]
+        sta HUDRAM+80+18
 _vrel   lda TRIG0T              ; same edge discipline as the title
         beq _vrel
 _vprs   lda TRIG0T
@@ -226,8 +249,11 @@ title_msg
         dta d'      PRESS FIRE TO DESCEND     '
 title_sub
         dta d'    FOUR FLOORS DOWN, NO WAY UP '
-victory_msg
-        dta d'  YOU ESCAPED - FIRE TO REPLAY  '
+victory_msg                     ; digits at columns 7-9 and 16-18 are written
+                                ; by show_victory. They are SPACES here, not
+                                ; zeros: a failure to write them should read as
+                                ; blank, not as a plausible 000.
+        dta d'  TIME      PAR      FIRE AGAIN '
 vstat_msg                       ; AMMO, not SHELLS: the status bar has called it
                                 ; AMMO for four levels and the end card is the
                                 ; wrong place to rename a stat

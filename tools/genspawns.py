@@ -135,6 +135,15 @@ with open(INC, 'w') as fh:
         for lvl in range(4):
             fh.write('        dta ' + ','.join(str(v) for v in vals[lvl * NSPAWN:(lvl + 1) * NSPAWN]) + '\n')
 
+    # PAR: seconds the designer allowed for each floor, written into every .lev
+    # since the levels were authored and read by nothing until now. Header byte
+    # 13 of the compiled container.
+    pars = []
+    for lvl in range(4):
+        hdr = open(os.path.join(SRC, 'map%d.lev.bin' % (lvl + 1)), 'rb').read()
+        pars.append(hdr[13])
+    fh.write('LVPAR\n        dta ' + ','.join(str(v) for v in pars) + '\n')
+    fh.write('PARTOTAL = %d           ; %s\n' % (sum(pars), ' + '.join(str(p) for p in pars)))
     fh.write('        ert * > $2BC0, "spawn tables have grown into the level tables at $2BC0"\n')
 
 print('\n'.join(report))
