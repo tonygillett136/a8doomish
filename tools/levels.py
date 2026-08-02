@@ -428,9 +428,21 @@ class Level:
 
         * the exit is authored as a trigger, but the engine's only end-of-level
           mechanism is `check_cell` seeing `$0C` in this plane -- so stamp it;
-        * keys are not implemented, so a locked door is indistinguishable from
-          solid wall at runtime. Compile them as plain doors rather than ship
-          levels whose exits cannot be reached.
+        Locked doors are still flattened to plain ones here, but no longer
+        because the runtime cannot do them -- it can. keys/check_cell/check_items
+        are implemented and MEASURED: the red door refuses at cell 16 with an
+        empty inventory and opens to $00 and lets you through with the key, and
+        standing on the authored key sets its bit.
+
+        What is not ready is the HARNESS. The autoplayer wedges partway along
+        the fetch-key-then-exit route on THE RED CISTERN, so nine checks that
+        depend on descending go red -- including the full playthrough. Shipping
+        a locked door before the sweep can play one would mean shipping a game
+        whose completability nothing verifies, which is the exact trade this
+        project does not make.
+
+        Flip this off (delete the loop below) the day walk_to can complete
+        level 2. Everything else is already in place.
         """
         out = [self.cells[y][x].mat for y in range(H) for x in range(W)]
         for i, m in enumerate(out):

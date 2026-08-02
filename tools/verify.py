@@ -38,6 +38,7 @@ AUDSHAD = 0x9F1E                # the audio engine's POKEY shadow
 HUDRAM  = 0x7900
 WONDONE = 0x7A07
 WONALL  = 0x7A13
+KEYSHELD = 0x7A59               # bit 0 red, 1 blue, 2 yellow
 INTITLE = 0x7A14
 ITMGOT  = 0x7A12
 ITMX, ITMY, ITMT = 0x2B40, 0x2B50, 0x2B60   # pickup tables (genitems.py)
@@ -1686,8 +1687,22 @@ class Sweep:
             want = (hdr[7], hdr[8])
             spawn = (hdr[4], hdr[5])
             found = [(i % 32, i // 32) for i, v in enumerate(grid) if v == 0x0C]
-            if found == [want] and self.route(grid, spawn, want) is not None:
-                good += 1
+            # Reachability now has to account for keys: a coloured door is a
+            # wall until its key is in hand, so the honest question is "can the
+            # player reach the exit, collecting whatever keys they can reach
+            # along the way". Fixed point -- expand, pick up, expand again.
+            keys = 0
+            while True:
+                if self.route(grid, spawn, want, keys) is not None:
+                    good += 1
+                    break
+                got = keys
+                for kx, ky, kt in self.level_keys(n - 1):
+                    if self.route(grid, spawn, (kx, ky), keys) is not None:
+                        got |= 1 << (kt - 2)
+                if got == keys:
+                    break               # no new key within reach: genuinely stuck
+                keys = got
         Sweep._exits = good
         return good
 
@@ -1707,7 +1722,19 @@ class Sweep:
         if not exits:
             return False
         goal = exits[0]
-        path = self.route(grid, (m[PX_HI], m[PY_HI]), goal)
+        # A locked door on the way means fetching its key first -- which is the
+        # POINT of the level, not an obstacle to route around. Without this the
+        # walker treats the door as wall and reports the exit unreachable,
+        # which is exactly what it did the moment locked doors began shipping.
+        keys = m[KEYSHELD]
+        if self.route(grid, (m[PX_HI], m[PY_HI]), goal, keys) is None:
+            for kx, ky, kt in self.level_keys(m[LEVELNO]):
+                if not self.walk_to((kx, ky), keys):
+                    return False
+                m = self.m()
+                keys = m[KEYSHELD]
+            grid = bytes(m[MAPBASE:MAPBASE + 0x400])
+        path = self.route(grid, (m[PX_HI], m[PY_HI]), goal, keys)
         if path is None:
             return False
         # Re-route from wherever the player actually IS every so often. A
@@ -1741,14 +1768,26 @@ class Sweep:
             stuck = stuck + 1 if pos == lastpos else 0
             lastpos = pos
             if stuck > 10:
-                for _ in range(3):
-                    self.go_tick(joy=0x08)
+                # Turn TOWARD the next waypoint. A fixed right turn was enough
+                # while the only trap was err settling at exactly 24; with a
+                # locked door in the route the walker wedges at err = -21,
+                # INSIDE the forward threshold, and turning the wrong way holds
+                # it there.
+                tx2, ty2 = path[min(i, len(path) - 1)]
+                w = int(math.atan2((ty2 + 0.5) - py,
+                                   (tx2 + 0.5) - px) / (2 * math.pi) * 256) & 255
+                e = ((w - mm[PANG] + 128) & 255) - 128
+                for _ in range(4):
+                    self.go_tick(joy=0x08 if e > 0 else 0x04)
                 self.go_tick(joy=0x01)
                 stuck = 0
                 continue
             if step % 150 == 149:
                 fresh = self.route(bytes(mm[MAPBASE:MAPBASE + 0x400]),
-                                   (mm[PX_HI], mm[PY_HI]), goal)
+                                   (mm[PX_HI], mm[PY_HI]), goal,
+                                   mm[KEYSHELD])   # carry the keys, or every
+                                                   # re-route treats the locked
+                                                   # door as wall and fails
                 if fresh:
                     path, i = fresh, 1
             while i < len(path) - 1 and \
@@ -1770,11 +1809,84 @@ class Sweep:
         self.go(60)
         return True
 
+    def level_keys(self, levelno):
+        """Key pickups this level authored, straight out of items.inc."""
+        import re
+        inc = open('src/items.inc').read()
+
+        def tbl(tag):
+            m = re.search(tag + r'\n((?:\s+dta [^\n]+\n)+)', inc)
+            return [[int(v) for v in l.split('dta ')[1].split(',')]
+                    for l in m.group(1).strip().split('\n')]
+        X, Y, T = tbl('ITMX'), tbl('ITMY'), tbl('ITMT')
+        return [(X[levelno][i], Y[levelno][i], t)
+                for i, t in enumerate(T[levelno]) if t >= 2]
+
+    def walk_to(self, goal, keys=0, limit=1800):
+        """Drive the player to a map cell -- same steering as descend()."""
+        import math
+        path, i = None, 1
+        stuck, lastpos = 0, None
+        for step in range(limit):
+            mm = self.m()
+            if (mm[PX_HI], mm[PY_HI]) == tuple(goal):
+                return True
+            if mm[HEALTH] < 60:
+                self.p[HEALTH] = 100
+            if path is None or step % 150 == 149:
+                fresh = self.route(bytes(mm[MAPBASE:MAPBASE + 0x400]),
+                                   (mm[PX_HI], mm[PY_HI]), tuple(goal), keys)
+                if not fresh:
+                    return False
+                path, i = fresh, 1
+            px = mm[PX_HI] + mm[PX_LO] / 256.0
+            py = mm[PY_HI] + mm[PY_LO] / 256.0
+            pos = (mm[PX_HI], mm[PX_LO], mm[PY_HI], mm[PY_LO])
+            stuck = stuck + 1 if pos == lastpos else 0
+            lastpos = pos
+            if stuck > 6:
+                # Turn TOWARD the waypoint, not blindly right. The heading
+                # error settles INSIDE the +/-24 forward threshold -- measured
+                # at -21 against a wall on THE RED CISTERN -- so the walker
+                # drives forward into stone for ever and a fixed right turn
+                # only makes the error worse. Same trap the DEVLOG records for
+                # descend at exactly 24; this is the general form.
+                px2 = mm[PX_HI] + mm[PX_LO] / 256.0
+                py2 = mm[PY_HI] + mm[PY_LO] / 256.0
+                tx2, ty2 = path[min(i, len(path) - 1)]
+                w = int(math.atan2((ty2 + 0.5) - py2,
+                                   (tx2 + 0.5) - px2) / (2 * math.pi) * 256) & 255
+                e = ((w - mm[PANG] + 128) & 255) - 128
+                for _ in range(4):
+                    self.go_tick(joy=0x08 if e > 0 else 0x04)
+                self.go_tick(joy=0x01)
+                stuck = 0
+                continue
+            while i < len(path) - 1 and \
+                    math.hypot(path[i][0] + 0.5 - px, path[i][1] + 0.5 - py) < 0.9:
+                i += 1
+            tx, ty = path[i]
+            dx, dy = (tx + 0.5) - px, (ty + 0.5) - py
+            want = int(math.atan2(dy, dx) / (2 * math.pi) * 256) & 255
+            err = ((want - mm[PANG] + 128) & 255) - 128
+            if abs(err) > 24:
+                self.go_tick(joy=0x08 if err > 0 else 0x04)
+            else:
+                self.go_tick(joy=0x01)
+        return (self.m()[PX_HI], self.m()[PY_HI]) == tuple(goal)
+
     @staticmethod
-    def route(grid, start, goal):
-        """Breadth-first path over cells the engine can actually walk."""
+    def route(grid, start, goal, keys=0):
+        """Breadth-first path over cells the engine can actually walk.
+
+        `keys` is the inventory bitmask: bit 0 red, 1 blue, 2 yellow, matching
+        the engine. A coloured door is passable only while carrying its key --
+        the same rule the player plays by, so this cannot route through a door
+        it has not earned.
+        """
         from collections import deque
-        passable = lambda v: v in (0, 0x08, 0x0C)
+        passable = lambda v: (v in (0, 0x08, 0x0C)
+                              or (0x09 <= v <= 0x0B and keys & (1 << (v - 0x09))))
         prev = {start: None}
         q = deque([start])
         while q:

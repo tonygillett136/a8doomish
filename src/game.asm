@@ -570,6 +570,28 @@ check_cell
         beq _cc_door
         cmp #$0C                ; exit switch
         beq _cc_exit
+        cmp #$09                ; $09/$0A/$0B are the red, blue and yellow
+        bcc _cc_plain           ; doors. The levels have authored them since
+        cmp #$0C                ; they were written and the compiler flattened
+        bcs _cc_plain           ; them to plain doors because nothing here could
+        sec                     ; tell one from a wall. It can now.
+        sbc #$09                ; A = 0 red, 1 blue, 2 yellow.
+        beq _cc_k0              ; X MUST SURVIVE: open_last writes the cell
+        cmp #1                  ; through it, and it still holds the index
+        beq _cc_k1              ; cell_solid left there. Indexing bitmask with
+        lda #4                  ; `tax` here opened a cell in the far column of
+        bne _cc_kt              ; the same row instead of the door -- silently,
+_cc_k1  lda #2                  ; and the door stayed shut for ever.
+        bne _cc_kt
+_cc_k0  lda #1
+_cc_kt  and keys
+        bne _cc_door            ; carrying it: opens like any other door
+        lda #SND_DOORCLK        ; refused -- the latch, not the hinge
+        jsr audio_play
+        lda #1                  ; ...and it still blocks
+        cmp #0
+        rts
+_cc_plain
         cmp #0                  ; ordinary cell: Z set iff open
         rts
 _cc_door
@@ -1120,6 +1142,9 @@ rsec1    = $7A55                ; Counting this way means no divide anywhere --
 rsec2    = $7A56                ; the end card reads the digits straight out.
 exitph   = $7A57                ; phase of the exit's pulse
 exitlum  = $7A58                ; ...and the luminance the renderer reads
+keys     = $7A59                ; bit 0 red, 1 blue, 2 yellow. Cleared per RUN,
+                                ; not per level: a key is a trophy of the floor
+                                ; it was found on and the next floor has its own.
 hudcol   = $7A50                ; status-panel colour, set per level from LVHUEH.
                                 ; Absolute RAM, not ZP: $C2-$CF is full, and
                                 ; game.asm's ZP block ends hard against the
@@ -1423,6 +1448,23 @@ check_floor
         lda #0
 _cf_st  sta ai_ph
 _cf_ok  rts
+bitmask dta 1,2,4,8
+
+; The game layer runs up against the display lists at $4000.
+        ert * > $4000, "game.asm has grown into the display lists at $4000"
+
+; ===========================================================================
+; run_clock -- one second of run time, as three digits.
+;
+; In the gap between the RAMTAB tables and ladder set B, because game.asm is
+; full to the display lists and its guard says so. Digits rather than a 16-bit
+; count of seconds, so the end card needs no divide: three increments with a
+; carry, on one frame in fifty.
+;
+; Every level has carried a par time since the levels were authored -- 90, 150,
+; 180, 240 seconds -- and nothing read them until now.
+; ===========================================================================
+        org $32B0
 
 ; ============================================================================
 ; check_items -- walking over a pickup collects it. Called once per render
@@ -1453,6 +1495,17 @@ _ci_loop
         ora itmgot
         sta itmgot
         lda ITMT,y
+        cmp #2                  ; 2/3/4 are the red, blue and yellow keys
+        bcc _ci_supply
+        sec
+        sbc #2
+        tax
+        lda bitmask,x
+        ora keys
+        sta keys
+        jmp _ci_snd
+_ci_supply
+        lda ITMT,y
         beq _ci_med
         lda ammo                ; shells: +15, capped at 99
         clc
@@ -1479,23 +1532,6 @@ _ci_next
         bne _ci_loop
         rts
 
-bitmask dta 1,2,4,8
-
-; The game layer runs up against the display lists at $4000.
-        ert * > $4000, "game.asm has grown into the display lists at $4000"
-
-; ===========================================================================
-; run_clock -- one second of run time, as three digits.
-;
-; In the gap between the RAMTAB tables and ladder set B, because game.asm is
-; full to the display lists and its guard says so. Digits rather than a 16-bit
-; count of seconds, so the end card needs no divide: three increments with a
-; carry, on one frame in fifty.
-;
-; Every level has carried a par time since the levels were authored -- 90, 150,
-; 180, 240 seconds -- and nothing read them until now.
-; ===========================================================================
-        org $32B0
 run_clock
         ; ---- the exit breathes -------------------------------------------
         ; Nothing else in this world moves, which is exactly why this works:

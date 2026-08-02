@@ -31,10 +31,15 @@ INC = os.path.join(SRC, 'items.inc')
 sys.path.insert(0, HERE)
 import levels as L                                              # noqa: E402
 
-NITEM = 4
+NITEM = 4                                   # a key, where there is one,
+                                            # takes one of the four slots: level 1
+                                            # only authors four usable pickups
 MEDKIT, SHELLS = 0, 1                       # engine types (game.asm check_items)
+KEY_RED, KEY_BLUE, KEY_YELLOW = 2, 3, 4
 TYPEMAP = {L.THING['stim']: MEDKIT, L.THING['medkit']: MEDKIT,
            L.THING['shells']: SHELLS, L.THING['shellbox']: SHELLS}
+KEYMAP = {L.THING['key_red']: KEY_RED, L.THING['key_blue']: KEY_BLUE,
+          L.THING['key_yellow']: KEY_YELLOW}
 
 
 def player_spawn(level):
@@ -68,13 +73,21 @@ for lvl in range(4):
     for x, y, t, a in levs[lvl].things:
         if t in TYPEMAP and (x, y) != spawn:
             byty[TYPEMAP[t]].append((x, y))
-    meds = pick(byty[MEDKIT], [spawn], 2)
-    ammo = pick(byty[SHELLS], [spawn] + meds, 2)
-    chosen = [(c, MEDKIT) for c in meds] + [(c, SHELLS) for c in ammo]
+    # A key is not a pickup you might get -- without it the level cannot be
+    # finished -- so it is placed FIRST, at the position its designer chose,
+    # and supplies fill whatever slots are left.
+    keys = [((x, y), KEYMAP[t]) for x, y, t, a in levs[lvl].things
+            if t in KEYMAP and (x, y) != spawn]
+    nsup = NITEM - len(keys)
+    meds = pick(byty[MEDKIT], [spawn], (nsup + 1) // 2)
+    ammo = pick(byty[SHELLS], [spawn] + meds, nsup - len(meds))
+    chosen = keys + [(c, MEDKIT) for c in meds] + [(c, SHELLS) for c in ammo]
     assert len(chosen) == NITEM, \
         'level %d authors only %d usable pickups' % (lvl, len(chosen))
-    print('  %-22s medkits %-16s shells %s'
-          % (levs[lvl].name, meds, ammo))
+    kn = {KEY_RED: 'red', KEY_BLUE: 'blue', KEY_YELLOW: 'yellow'}
+    print('  %-22s medkits %-14s shells %-14s %s'
+          % (levs[lvl].name, meds, ammo,
+             ' '.join('%s KEY at %s' % (kn[t].upper(), c) for c, t in keys)))
     xs += [c[0][0] for c in chosen]
     ys += [c[0][1] for c in chosen]
     ts += [c[1] for c in chosen]

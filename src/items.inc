@@ -4,16 +4,16 @@ NITEM = 4
         org $2B40               ; below the spawn tables
 ITMX
         dta 23,13,26,13
-        dta 24,8,8,3
+        dta 18,24,8,8
         dta 6,12,27,23
-        dta 25,10,3,16
+        dta 4,25,10,3
 ITMY
         dta 17,3,27,12
-        dta 21,16,27,6
+        dta 3,21,16,27
         dta 5,22,16,25
-        dta 22,22,11,11
+        dta 8,22,22,11
 ITMT
         dta 0,0,1,1
+        dta 2,0,0,1
         dta 0,0,1,1
-        dta 0,0,1,1
-        dta 0,0,1,1
+        dta 4,0,0,1
