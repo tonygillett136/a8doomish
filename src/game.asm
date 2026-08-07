@@ -131,6 +131,24 @@ _wpn_idle
                                 ; post-shot render as 0 on seven shots of
                                 ; twenty. A linear decay spans two renders.
 _nokick
+        ; ---- the map borrows the screen, and it has to say so HERE.
+        ; Every branch below rewrites all three band hues from scratch, every
+        ; frame -- so the hue is owned by this chain and nothing outside it can
+        ; hold a colour for longer than 20ms. map_mode set the three bytes
+        ; directly at first and the map came out in the level's own ceiling,
+        ; wall and floor stripes anyway, seamed at whatever row the last render
+        ; happened to leave: the writes were landing and being undone before
+        ; the beam reached them.
+        lda mapon
+        beq _notmap
+        lda #MAPHUE             ; one flat hue, so the seam DLIs have nothing
+        sta hceil               ; left to say
+        sta hwall
+        sta hfloor
+        sta COLBK
+        sta COLBKH
+        jmp _fldone
+_notmap
         ; ---- victory: the world turns to gold
         lda wonall
         beq _notwon
@@ -815,6 +833,8 @@ load_level
         lda #>ATTRBASE
         sta rl_dst+1
         jsr rle_decode
+
+        jsr vis_clear           ; a new floor is an unread floor
 
         ldx rl_lvl
         lda #$80                ; spawn at this level's own start

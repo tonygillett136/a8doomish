@@ -219,6 +219,8 @@ _ml_play
         jsr check_items         ; walk over a pickup to take it
         jsr check_floor         ; nukage bites (attr bit 7, authored all along)
         jsr actors_update       ; enemy state machines (render tick)
+        jsr fog_here            ; the breadcrumb through the middle of the hall
+        jsr map_mode            ; hold START: blocks here until it is released
         jsr render_view
         jsr draw_sprites        ; billboards, depth-clipped against COLDIST
         jsr draw_weapon
@@ -439,6 +441,30 @@ _hity                           ; N/S face -- darker: the cheapest depth cue
 
 ; ---- shared shading: per-cell light, then the face --------------------------
 _shade
+        ; ---- fog of war ----------------------------------------------------
+        ; Both hit paths land here with mptr still on the wall cell and matid
+        ; still holding its material, which is the one instant in the frame
+        ; where the automap's answer is already in hand. A, X, Y and t0 are all
+        ; dead at this point -- quantise has consumed t0/t1 and nothing below
+        ; reads a register until it loads one. mptr is NOT dead: the light
+        ; sample two dozen lines down steps back from it, so it is borrowed and
+        ; put back rather than recomputed.
+        lda matid
+        and #15                 ; matid is not guaranteed in range -- MATBIAS
+        tax                     ; below masks it for exactly the same reason
+        lda MAPLUM,x
+        sta t0
+        lda mptr+1
+        pha
+        clc
+        adc #VISOFS
+        sta mptr+1
+        ldy #0
+        lda t0
+        sta (mptr),y
+        pla
+        sta mptr+1
+
         lda dist                ; keep the true distance before the shading
         sta dist0               ; offsets below are folded into it
 
@@ -478,6 +504,25 @@ _bkdone
         bcc _lgok
         lda #$FF                ; saturate: pitch dark
 _lgok   sta dist
+
+        ; ---- fog of war, second half --------------------------------------
+        ; The wall mark alone drew rooms as speckle: 40 rays walking down a
+        ; corridor all land on the far wall and none of them land on the walls
+        ; they are passing, so a hall you had crossed showed as a dotted line
+        ; and two pillars. This is the OPEN cell the ray was standing in when
+        ; it hit -- floor you are looking at, one cell per column, and tmpp is
+        ; already pointing at it because the light sample above needed exactly
+        ; the same cell. Y is still 0 from that read.
+        lda tmpp+1
+        pha
+        clc
+        adc #VISOFA             ; ATTRBASE $74xx -> VIS $A5xx
+        sta tmpp+1
+        lda #FOGFLOR
+        sta (tmpp),y
+        pla
+        sta tmpp+1
+
         lda matid               ; material bias, same trick: different wall
         and #15                 ; types read differently at the same distance.
         tax                     ; MATBIAS is 16 bytes and SHADE_EW follows it,
@@ -1124,6 +1169,8 @@ _cs     sta (tmpp),y
         dex
         bne _cs
         rts
+
+        icl 'automap.asm'
 
 ; ============================================================================
 ; The engine's own code ends here. Everything from $2500 up is DATA at fixed

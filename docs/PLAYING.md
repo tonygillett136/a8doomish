@@ -2,11 +2,12 @@
 
 *Four floors down, no way up.*
 
-You are somewhere under the world with a shotgun and no map. Four floors lie
-below you. Each one has a way down, and the way down is the only way on.
+You are somewhere under the world with a shotgun and a map that starts out
+blank. Four floors lie below you. Each one has a way down, and the way down is
+the only way on.
 
-Nothing here needs explaining twice. There is one weapon, one button, and one
-direction — down.
+Nothing here needs explaining twice. There is one weapon, one direction — down
+— and a map that fills itself in as you look around.
 
 ---
 
@@ -20,12 +21,14 @@ direction — down.
 | **Pull down** | walk backward |
 | **Left / right** | turn |
 | **Trigger** | fire |
+| **START** (on the case) | hold to see the map |
 
 **In a browser** — **arrow keys** or **WASD** to move, **SPACE** or **X** to
-fire.
+fire, and hold **M** (or **Tab**) for the map. On a phone there are on-screen
+buttons for both.
 
-There is no strafe, no run key, no map key, no use key. Doors open because you
-walked into them.
+There is no strafe, no run key and no use key. Doors open because you walked
+into them.
 
 **The trigger is also the "carry on" button.** It starts the game from the
 title, it clears the banner when you finish a floor, it restarts you when you
@@ -50,8 +53,43 @@ That top line is also where the game talks to you. When it has something to
 say — you have cleared the floor, you have died — the message replaces it, and
 the floor name stays put underneath.
 
-There is deliberately no clock, no compass, no automap and no key display. The
-only instrument you get is your own memory of the corridor behind you.
+There is deliberately no clock and no key display. What you have found and how
+long you have taken are things you are expected to carry in your head.
+
+---
+
+## The map
+
+**Hold START and the floor plan comes up.** Let go and you are back in the
+corridor.
+
+It shows you exactly as much as you have earned and not one cell more. Every
+wall you have laid eyes on is drawn; every stretch of floor you have looked
+across is drawn; everything else is black. A room you have not entered is not
+on the map, and neither is the far side of a hall you crossed without turning
+round. The map is a record of where your eyes have been, so the way to fill it
+in is to look.
+
+Reading it costs you nothing in blood — **the world stops while the map is
+up**, and nothing can walk up on you while you are studying it. It costs you
+the only thing the game actually scores: **the run clock does not stop.** Look
+as long as you like, and pay for it in par.
+
+Four things are worth picking out of it:
+
+| | |
+|---|---|
+| **A bright cell with a smaller one beside it** | you, and the way you are facing |
+| **The brightest cell on the map** | the way down |
+| **A cell brighter than the walls** | a door |
+| **Brighter still** | a locked door |
+
+What it will **not** do is find things for you. A secret wall is drawn as
+stone, because it is stone until you know better. Enemies are not on it. The
+map answers *"where have I been"*, and never *"where should I go"*.
+
+**Dying wipes it.** The floor resets completely when you retry, and that
+includes what you knew about it.
 
 ---
 
@@ -138,7 +176,8 @@ giving you a moment to read the tally before the floor opens.
 The trigger puts you back at the start of **the floor you died on** — not back
 to the beginning of the game. That floor is completely reset: the doors are
 shut again, the medkits and shells are back where they were, your kill tally
-starts over, and you begin with full health, 50 shells and **empty hands**.
+starts over, your map goes blank, and you begin with full health, 50 shells and
+**empty hands**.
 
 If that floor's exit needed a key, the key is lying where you first found it.
 You lose the progress, not the possibility.
@@ -189,7 +228,7 @@ game.
 
 ---
 
-## Five things worth knowing
+## Six things worth knowing
 
 1. **Get close.** One shell at two cells beats five at eight. Every fight in
    this game is decided by whether you were willing to close the distance.
@@ -199,6 +238,9 @@ game.
 4. **Don't walk past medkits.** Health is the only thing you carry down.
 5. **A click means a key, not a wall.** If a door refuses you with a click,
    there is a key on this floor, and there is a way to reach it.
+6. **Look before you walk, then check the map.** The map only knows what you
+   have looked at, so a slow sweep of a hall from the doorway is worth more
+   than a fast run through the middle of it.
 
 ---
 

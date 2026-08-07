@@ -47,6 +47,10 @@ AC_FRAME_OFF = 0x7828
 AC_ANIM_OFF  = 0x7860
 AC_TIMER_OFF = 0x7838
 HCEIL, HWALL, HFLOOR = 0x00CA, 0x00CB, 0x00CC   # the three band hues (abyss.lab)
+VIS     = 0xA500                # automap fog: one byte per cell, 0 = unseen
+FOGFLOR = 0x44                  # ...and the luminance it writes for open floor
+MAPHUE  = 0x90                  # the flat hue the map borrows the screen in
+SDLSTL  = 0x0230                # which display list is up = which buffer is shown
 HUDCOL  = 0x7A50
 DEATHFR = 0x7A51
 
@@ -501,6 +505,24 @@ class Sweep:
                  'keys after dying: %d. keys on the run after escaping: %d '
                  '(want 0 and 0)' % (dead, escaped))
 
+        fresh, seen, unseen, wrong, sec = self.fog_of_war()
+        self.chk('the map only shows what you looked at',
+                 seen > 60 and unseen > 400 and wrong == 0 and fresh < 60,
+                 'after crossing the floor: %d cells seen, %d still dark, %d '
+                 'disagreeing with the grid (want 0). carried onto the next '
+                 'floor: %d of a poked 1024 (want a fresh floor\'s worth)'
+                 % (seen, unseen, wrong, fresh))
+        self.chk('the map does not give the secrets away',
+                 sec is True, 'a secret reads as something other than stone'
+                 if sec is not True else '')
+
+        drew, held, freed, stalled, off = self.map_key()
+        self.chk('START holds the map up and stops the world',
+                 drew and held and freed and stalled,
+                 'fog on screen: %d cells wrong (want <=2, the blip and its '
+                 'nose). hue flat while held: %s, restored on release: %s, '
+                 'world frozen: %s' % (off, held, freed, stalled))
+
         far, near, lo, hi = self.exit_legibility()
         self.chk('the way out is legible from across a room',
                  far >= 2.5 and near > 0 and hi - lo >= 1.5,
@@ -888,6 +910,90 @@ class Sweep:
         s.pull_trigger()
         s.go(60)
         return after_death, s.m()[KEYSHELD]
+
+    def fog_of_war(self):
+        """The map is a record of what the rays hit, and nothing else.
+
+        Three things have to hold at once and they pull against each other: a
+        fresh floor is completely dark, crossing it lights a real part of it up,
+        and nothing lights up that the player could not have seen. The last one
+        is the check with teeth. An off-by-one in the VIS offset still produces
+        a perfectly plausible map -- drawn one cell or one row out of true --
+        and no screenshot will tell you, because there is nothing in the picture
+        to compare it against. Comparing it against the grid it came from is the
+        only way to know, so that is what this does, cell by cell.
+        """
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(60)
+
+        s.walk_to((20, 21), 0)          # right across THE VESTIBULE
+        m = s.m()
+        seen = sum(1 for i in range(1024) if m[VIS + i])
+        wrong = sum(1 for i in range(1024) if m[VIS + i]
+                    and (m[VIS + i] == FOGFLOR) != (m[MAPBASE + i] == 0))
+
+        # ...and the palette itself, read back out of the binary. Checking a
+        # played floor would only cover the secrets the autoplayer happened to
+        # glance at -- and on a run where it glanced at none, the check would
+        # pass by having tested nothing.
+        addr = None
+        for line in open('abyss.lab'):
+            f = line.split()
+            if len(f) >= 3 and f[-1] == 'MAPLUM':
+                addr = int(f[-2], 16)
+        secret = (addr is not None and m[addr + 0x0D] == m[addr + 0x01]
+                  and m[addr + 0x0D] != m[addr + 0x00])
+
+        # A new floor is an unread floor. Asserting "empty at spawn" would be
+        # wrong -- by the time a frame has rendered the player has already seen
+        # the room they woke up in -- so this fills the array to the brim and
+        # descends, which tests the thing that actually matters: that dropping
+        # a floor wipes what you knew about the last one.
+        for i in range(1024):
+            s.p[VIS + i] = 0xFF
+        s.descend()
+        fresh = sum(1 for i in range(1024) if s.m()[VIS + i])
+        return fresh, seen, 1024 - seen, wrong, secret
+
+    def map_key(self):
+        """Hold START: the map goes up, the hue goes flat, the world stops.
+
+        `drew` compares the displayed framebuffer against VIS row by row, which
+        is what actually proves map_draw put the fog where it claims. The rest
+        of the map could be verified by eye; this part could not.
+        """
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(60)
+        for _ in range(20):
+            s.go_tick(joy=1)
+
+        r0 = s.m()[RENDERS]
+        s.a.frame(20)
+        r1 = s.m()[RENDERS]
+        running = (r1 - r0) & 0xFF
+
+        s.a.inp.start = 1
+        s.a.frame(30)
+        m = s.m()
+        held = m[HCEIL] == m[HWALL] == m[HFLOOR] == MAPHUE
+        frozen = ((m[RENDERS] - r1) & 0xFF) < running
+
+        base = 0x8000 if m[SDLSTL + 1] == 0x40 else 0x9000
+        off = sum(1 for row in range(32) for x in range(32)
+                  if m[base + row * 120 + 4 + x] != m[VIS + row * 32 + x])
+        drew = off <= 2         # the blip and its facing nose are painted over
+                                # the fog, and are the only two cells allowed to
+                                # disagree with it
+
+        s.a.inp.start = 0
+        s.a.frame(40)
+        m = s.m()
+        freed = not (m[HCEIL] == m[HWALL] == m[HFLOOR])
+        return drew, held, freed, frozen, off
 
     def exit_legibility(self):
         """Exit-vs-stone contrast far and near, and the pulse's extent."""

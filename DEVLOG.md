@@ -2789,3 +2789,125 @@ is the one document you cannot write from memory, because it has to describe
 what the machine does rather than what you meant it to do. Two rounds of
 adversarial visual review and 71 green checks did not find these. *Writing down
 how to play* found both in an afternoon.
+
+---
+
+## The map, and who owns a colour
+
+Tony asked about two ideas: a compass in the status bar, and a map on a
+keypress. The levels answered the first question. Every floor in this game is
+dominated by pillar halls with a regular `#..#..#..#` lattice — stand anywhere
+in one, face any direction, and the view is identical. That is a manufactured
+disorientation and there was nothing in the game that answered it.
+
+But the same geometry argues against a *plain* map. These floors are not mazes;
+they are three or four halls chained by short corridors, and THE VESTIBULE is
+26% open. A map of that is not a tool for solving anything — there is nothing
+to solve — it is just the answer, handed over on every floor from the first
+second, and it would have walked straight over the one thing the exit is built
+around: the pulsing doorway says nothing about *where* the way out is until you
+can already see it.
+
+So: fog of war, which is the version that keeps both.
+
+### The fog is the raycaster's own work
+
+No second system, no visibility pass, no flood fill. The DDA already walks the
+grid 40 times a frame and already knows two things at the moment it stops: the
+wall cell it landed on, and the open cell it was standing in when it did. The
+first is in `mptr`; the second the light sampler computes anyway, because a
+wall is lit by the room in front of it. Both get written into `VIS`, and that
+is the entire fog system — about 40 bytes of code inside `render_view`, at a
+cost too small to measure (renders per 20 frames: 4 before, 4 after).
+
+`VIS` holds the finished *map byte*, not the material id. The lookup happens
+once, at the instant a cell is seen, which is the one moment the material is
+already in a register — and it turns drawing the map into a straight copy with
+no per-cell decisions at all.
+
+The wall mark alone was not enough. Forty rays walking down a corridor all land
+on the far wall and none of them land on the walls they are passing, so a hall
+you had crossed drew as a dotted line and two pillars. Adding the open cell —
+one more store, on a pointer that was already there — took a crossing of THE
+VESTIBULE from 113 mapped cells to 190, and turned speckle into a floor plan.
+
+### What the table is for
+
+`MAPLUM` is a 16-entry table rather than a chain of comparisons for exactly one
+reason: index `$0D` is the secret wall, and it must come out byte-identical to
+stone at `$01`. A comparison would have been shorter and would have invited
+somebody to give secrets their own shade "so they read properly". One table
+entry is the difference between a map and a cheat sheet. The sweep now reads
+that table back out of the binary and asserts it — checking a played floor
+would only have covered the secrets the autoplayer happened to glance at, and
+on a run where it glanced at none, the check would have passed by testing
+nothing.
+
+### Three scanlines, not two
+
+The first version drew cells 2×2 pixels. It was wrong, and wrong in the way a
+navigation aid must never be: a mode 9 pixel is 2 colour clocks across and a
+buffer row is 2 scanlines, so on a 4:3 screen one pixel is 1.6 times wider than
+it is tall — and every square hall in the game drew as a landscape rectangle
+twice its real width. Two pixels by *three* rows comes out at 1.07:1, and 32
+rows of 3 is exactly the 96 the buffer has. The map fills the screen and the
+rooms are the shape they are.
+
+### The bug: a colour is not yours to set
+
+`map_mode` set `hceil`, `hwall` and `hfloor` to a flat blue and drew. The map
+came up in the level's own ceiling, wall and floor stripes anyway, seamed at
+whatever row the last render had left the DLIs — and the stores were provably
+landing, `85 CA / 85 CB / 85 CC` right there in the listing.
+
+The VBI rewrites all three, from the level tables, **every single frame**. It
+is a priority chain — victory, death, pain flash, muzzle flash, normal — and
+the bottom of it repaints the hues unconditionally. Nothing outside that chain
+can hold a colour for longer than 20ms. The writes were landing and being
+undone before the beam reached them.
+
+The fix is not to write harder. It is `mapon`: a flag the VBI reads, and a new
+top entry in the chain that owns the hue while the map is up. Which is the
+general shape of the thing — **if some code repaints a register every frame,
+that code owns the register**, and everyone else asks.
+
+### What it costs the player
+
+The world stops while the map is up and the run clock does not. That fell out
+of the implementation rather than being designed: the main loop is not
+frame-locked, so freezing it was the only way to look at the map without the
+loop free-running and driving the enemies at three times speed. But it is the
+right rule. The map is free in blood and expensive in par, and par is the thing
+the game actually scores.
+
+Dying wipes it, like the doors, the items, the kill tally and the keys.
+
+### Verifying it
+
+Three new checks, **75/75**:
+
+- **the map only shows what you looked at** — after crossing THE VESTIBULE, 190
+  cells seen, 834 still dark, and **0 disagreeing with the grid**. That last
+  number is the one with teeth: an off-by-one in the `VIS` offset still produces
+  a perfectly plausible map, drawn one cell or one row out of true, and no
+  screenshot can tell you, because there is nothing in the picture to compare it
+  against. Comparing it cell by cell against the grid it came from is the only
+  way to know.
+- **the map does not give the secrets away** — the palette, read back out of the
+  binary.
+- **START holds the map up and stops the world** — the framebuffer compared
+  against `VIS` row by row: exactly **2 cells** disagree, the player blip and its
+  facing nose, which are the only two allowed to.
+
+The web player needed the same wiring — byte 5 of the input template was never
+being set, so `M` did nothing in a browser. Verified in Playwright the only way
+that means anything: with the key held, the ceiling band and the floor band
+sample to the *same* RGB (0,22,36); released, they are (27,33,43) and
+(106,35,22). The key reaches the machine.
+
+Checked on the CRT and signed off: the flat hue holds, and luminance 4 floor
+against luminance 8 wall separates as cleanly on a real screen as it does in a
+PNG. Which was the open question — the aspect-ratio arithmetic said the cells
+would come out square on a 4:3 tube, but the emulator renders 384x240 square
+buffer pixels and cannot show you that, so the shape of the map was the one
+thing no amount of sweeping could confirm.

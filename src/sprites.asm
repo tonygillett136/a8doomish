@@ -629,4 +629,5 @@ _sl_cutn
         bne _sl_cut
         jmp _sl_adv
 
+        ert * > VIS, "sprites.asm code has grown into the automap's fog array"
         icl 'sprtabs.asm'

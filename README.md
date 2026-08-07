@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
   <img src="https://img.shields.io/badge/binary-29%2C606%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-72%2F72-2e7d32">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-75%2F75-2e7d32">
 </p>
 
 ---
@@ -71,12 +71,13 @@ been rebuilt not to.
 Grab [`abyss.xex`](abyss.xex) and load it however you load an XEX — an SD
 cartridge, an SIO2SD, `atari800 abyss.xex`, Altirra, anything.
 
-Joystick in port 1. **Fire** starts, and fires. That is the whole control scheme.
+Joystick in port 1. **Fire** starts, and fires. **START** holds up the map.
+That is the whole control scheme.
 
 **New to it?** [**`docs/PLAYING.md`**](docs/PLAYING.md) is the player's manual —
-controls, what the shotgun does at each range, how doors and keys work, and how
-to recognise the way out. Two minutes, and it is the difference between wandering
-and descending.
+controls, what the shotgun does at each range, how doors and keys work, how the
+map earns what it shows you, and how to recognise the way out. Two minutes, and
+it is the difference between wandering and descending.
 
 - **PAL 800XL/130XE, 64K.** It has only ever been run on PAL.
 - BASIC is disabled by the program itself now, so you should not need to hold
@@ -235,7 +236,7 @@ contains; `tools/gallery.py` takes the screenshots.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **72 / 72** — every one of them asserting on pixels or game state, not on a variable having changed |
+| **Acceptance sweep** | **75 / 75** — every one of them asserting on pixels or game state, not on a variable having changed |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | The bestiary, measured | hulk 120→60→0 over exactly two point-blank shots; gunner attacking within 150 frames; hulk 1.23× a husk's height | all sweep checks |
@@ -348,7 +349,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 72-point acceptance sweep, in process
+python3 tools/verify.py        # 75-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```

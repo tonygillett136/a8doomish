@@ -16,7 +16,7 @@
 
   const VISIBLE_X = 24, VISIBLE_W = 336, H = 240, SCREEN_W = 384;
   const PAL_FPS = 49.86;
-  const OFF_JOY0 = 8, OFF_TRIG0 = 9;
+  const OFF_START = 5, OFF_JOY0 = 8, OFF_TRIG0 = 9;
 
   const canvas = document.getElementById('screen');
   const ctx2d = canvas.getContext('2d');
@@ -26,7 +26,7 @@
   let audio = null, gain = null, muted = false;
   let ring = new Float32Array(32768), ringR = 0, ringW = 0;
   let sndPtrFn = null, sndLenFn = null, sampleSize = 2;
-  let joyMask = 0, fireHeld = false, fireLatch = 0;
+  let joyMask = 0, fireHeld = false, fireLatch = 0, mapHeld = false;
   let last = 0, acc = 0, running = false;
 
   // ---- input --------------------------------------------------------------
@@ -35,6 +35,10 @@
     ArrowLeft: 4, KeyA: 4, ArrowRight: 8, KeyD: 8,
   };
   const KEYFIRE = new Set(['Space', 'KeyX', 'KeyZ', 'ControlLeft', 'ControlRight']);
+  // The console START key. On a real 800XL it is on the case beside the
+  // keyboard; here it is Tab, which is the nearest thing to a key you can
+  // hold with your left hand while the right one stays on the arrows.
+  const KEYMAP = new Set(['Tab', 'KeyM']);
 
   window.addEventListener('keydown', (e) => {
     if (!running) return;
@@ -44,10 +48,12 @@
       fireHeld = true;
       e.preventDefault();
     }
+    if (KEYMAP.has(e.code)) { mapHeld = true; e.preventDefault(); }
   });
   window.addEventListener('keyup', (e) => {
     if (KEYJOY[e.code]) joyMask &= ~KEYJOY[e.code];
     if (KEYFIRE.has(e.code)) fireHeld = false;
+    if (KEYMAP.has(e.code)) { mapHeld = false; e.preventDefault(); }
   });
 
   // touch pad
@@ -57,6 +63,12 @@
     el.addEventListener('pointerup', () => { joyMask &= ~bit; });
     el.addEventListener('pointerleave', () => { joyMask &= ~bit; });
   });
+  const mapBtn = document.getElementById('mapBtn');
+  if (mapBtn) {
+    mapBtn.addEventListener('pointerdown', (e) => { mapHeld = true; e.preventDefault(); });
+    mapBtn.addEventListener('pointerup', () => { mapHeld = false; });
+    mapBtn.addEventListener('pointerleave', () => { mapHeld = false; });
+  }
   const fireBtn = document.getElementById('fireBtn');
   if (fireBtn) {
     fireBtn.addEventListener('pointerdown', (e) => { fireLatch = 6; fireHeld = true; e.preventDefault(); });
@@ -146,6 +158,7 @@
     core.HEAPU8.fill(0, inputPtr, inputPtr + 32);
     core.HEAPU8[inputPtr + OFF_JOY0] = joyMask;
     core.HEAPU8[inputPtr + OFF_TRIG0] = (fireHeld || fireLatch > 0) ? 1 : 0;
+    core.HEAPU8[inputPtr + OFF_START] = mapHeld ? 1 : 0;
     if (fireLatch > 0) fireLatch--;
     core.ccall('libatari800_next_frame', 'number', ['number'], [inputPtr]);
     pumpAudio();

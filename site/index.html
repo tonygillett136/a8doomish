@@ -83,10 +83,15 @@ h2::before{content:"// ";color:var(--dim)}
   .pad div{border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
     color:var(--dim);user-select:none;-webkit-user-select:none;touch-action:none}
   .pad div:active{background:#333}
+  .btns{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
   #fireBtn{width:92px;height:92px;border:2px solid var(--stone);border-radius:50%;
-    align-self:center;display:flex;align-items:center;justify-content:center;color:var(--stone);
+    display:flex;align-items:center;justify-content:center;color:var(--stone);
     font-weight:700;letter-spacing:.1em;user-select:none;-webkit-user-select:none;touch-action:none}
   #fireBtn:active{background:var(--stone-d)}
+  #mapBtn{width:92px;height:40px;border:1px solid var(--line);display:flex;align-items:center;
+    justify-content:center;color:var(--dim);font-size:13px;letter-spacing:.1em;
+    user-select:none;-webkit-user-select:none;touch-action:none}
+  #mapBtn:active{background:#333}
 }
 
 /* ---- gallery ---- */
@@ -111,6 +116,9 @@ h2::before{content:"// ";color:var(--dim)}
 .card code{color:var(--gold);background:#241b18;padding:0 5px;border-radius:3px;font-size:13px}
 /* ---- manual ---- */
 .cols.manual{grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr))}
+/* an odd number of cards leaves the last one stranded at half width; let it
+   take the whole row instead. Harmless when the grid collapses to one column. */
+.cols.manual .card:last-child:nth-child(odd){grid-column:1/-1}
 .card table{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
 .card table td{padding:5px 0;border-top:1px solid var(--line);color:#c8bbaa;vertical-align:top}
 .card table tr:first-child td{border-top:none}
@@ -143,7 +151,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <section id="play">
   <div class="wrap">
     <h2>PLAY</h2>
-    <p class="lead">This is the real game — byte-for-byte the same 29,609-byte executable that runs
+    <p class="lead">This is the real game — byte-for-byte the same 30,083-byte executable that runs
     on the hardware, here running in an Atari 800XL emulator compiled to WebAssembly. PAL, with
     sound: an audio engine that for most of this game's life was verified only as POKEY register
     traces, never actually heard.</p>
@@ -154,7 +162,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
     </div>
     <div class="emu-shell" style="margin-top:0;border-top:none">
       <div class="emu-bar">
-        <span class="keys"><b>&larr;&uarr;&darr;&rarr;</b> or <b>WASD</b> move &nbsp; <b>SPACE</b>/<b>X</b> fire &nbsp;&middot;&nbsp; fire starts, and fires — that's the whole scheme</span>
+        <span class="keys"><b>&larr;&uarr;&darr;&rarr;</b> or <b>WASD</b> move &nbsp; <b>SPACE</b>/<b>X</b> fire &nbsp; hold <b>M</b> for the map &nbsp;&middot;&nbsp; fire starts, and fires</span>
         <span>
           <button id="muteBtn">SOUND: ON</button>
           <button id="fsBtn">FULLSCREEN</button>
@@ -167,7 +175,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
           <div data-j="4">&larr;</div><div></div><div data-j="8">&rarr;</div>
           <div></div><div data-j="2">&darr;</div><div></div>
         </div>
-        <div id="fireBtn">FIRE</div>
+        <div class="btns"><div id="mapBtn">MAP</div><div id="fireBtn">FIRE</div></div>
       </div>
     </div>
   </div>
@@ -176,10 +184,11 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <section id="howto">
   <div class="wrap">
     <h2>HOW TO PLAY</h2>
-    <p class="lead">You are somewhere under the world with a shotgun and no map. Four floors lie below
-    you, each with one way down, and the way down is the only way on. There is no strafe, no run key,
-    no automap and no use key — doors open because you walked into them. Everything you need is here;
-    the <a href="https://github.com/tonygillett136/a8doomish/blob/main/docs/PLAYING.md">full manual</a>
+    <p class="lead">You are somewhere under the world with a shotgun and a map that starts out blank.
+    Four floors lie below you, each with one way down, and the way down is the only way on. There is
+    no strafe, no run key and no use key — doors open because you walked into them. Everything you
+    need is here; the
+    <a href="https://github.com/tonygillett136/a8doomish/blob/main/docs/PLAYING.md">full manual</a>
     has the rest.</p>
     <div class="cols manual">
 
@@ -188,11 +197,27 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
           <tr><td>Walk forward / back</td><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd> or <kbd>W</kbd> <kbd>S</kbd></td></tr>
           <tr><td>Turn</td><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>A</kbd> <kbd>D</kbd></td></tr>
           <tr><td>Fire</td><td><kbd>SPACE</kbd> or <kbd>X</kbd></td></tr>
-          <tr><td>On a real Atari</td><td>joystick, port 1</td></tr>
+          <tr><td>Hold for the map</td><td><kbd>M</kbd> or <kbd>Tab</kbd></td></tr>
+          <tr><td>On a real Atari</td><td>joystick port 1, <kbd>START</kbd> for the map</td></tr>
         </table>
         <p class="note">Fire is also the carry-on button — it starts the game, clears every banner and
         restarts you when you die. Whenever the game is waiting, it is waiting for fire, and it says so
         on screen.</p>
+      </div>
+
+      <div class="card"><h3>THE MAP — ONLY WHAT YOU LOOKED AT</h3>
+        <table>
+          <tr><td>A bright cell with a smaller one beside it</td><td>you, and your facing</td></tr>
+          <tr><td>The brightest cell on the map</td><td>the way down</td></tr>
+          <tr><td>Brighter than the walls</td><td>a door</td></tr>
+          <tr><td>Brighter still</td><td>a locked door</td></tr>
+        </table>
+        <p class="note">Hold <kbd>M</kbd> and the floor plan comes up, showing every wall you have laid
+        eyes on and every stretch of floor you have looked across. Everything else is black — the far
+        side of a hall you crossed without turning round is not on it. Reading it is free in blood
+        (<b>the world stops</b>) and expensive in par (<b>the run clock does not</b>). It will not find
+        things for you: secrets are drawn as plain stone, and enemies are not drawn at all. Dying wipes
+        it, like everything else on the floor.</p>
       </div>
 
       <div class="card"><h3>THE SHOTGUN — GET CLOSE</h3>
@@ -249,6 +274,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
       <figure><img src="img/09_silent_colonnade.png" alt="Silent Colonnade"><figcaption><b>SILENT COLONNADE</b> — grey stone under a blue vault</figcaption></figure>
       <figure><img src="img/10_the_maw.png" alt="The Maw"><figcaption><b>THE MAW</b> — violet stone, burning red sky</figcaption></figure>
       <figure><img src="img/12_hulk.png" alt="A hulk on THE MAW"><figcaption><b>THE HULK</b> — the one at the bottom, three cells away on THE MAW. Two shells at this range, ten from across the room; it stays where it dies.</figcaption></figure>
+      <figure><img src="img/13_automap.png" alt="The automap on THE VESTIBULE, part explored"><figcaption><b>THE MAP</b> — THE VESTIBULE, 255 of its 1,024 cells earned. The fog is the raycaster's own work: every column that lands on a wall records that cell, so the map can only ever show geometry you have actually looked at.</figcaption></figure>
       <figure><img src="img/05_muzzleflash.png" alt="Muzzle flash"><figcaption><b>THE FLASH</b> — each band keeps its hue; the thing you shot at stays visible</figcaption></figure>
     </div>
   </div>
@@ -264,7 +290,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
       <div><b>5</b><span>CYCLES A PIXEL &mdash; THE 6502 FLOOR</span></div>
       <div><b>~10.2 fps</b><span>WORLD RENDER</span></div>
       <div><b>50 Hz</b><span>INPUT, WHATEVER THE RENDERER IS DOING</span></div>
-      <div><b>72/72</b><span>CHECKS, ALL ON PIXELS OR STATE</span></div>
+      <div><b>75/75</b><span>CHECKS, ALL ON PIXELS OR STATE</span></div>
       <div><b>1</b><span>NIGHT TO BUILD</span></div>
     </div>
     <div class="cols" style="margin-top:26px">
@@ -325,7 +351,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
 <footer>
   <div class="wrap">
-    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (29,609 bytes)</span>
+    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (30,083 bytes)</span>
     <span>Built by <a href="https://claude.com/claude-code">Claude Code</a> with Tony Gillett.
     Not affiliated with id Software; DOOM is a trademark of id Software LLC.</span>
   </div>
