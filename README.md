@@ -14,8 +14,8 @@
   <img src="https://img.shields.io/badge/platform-Atari%20800XL%2FXE-8b1a1a">
   <img src="https://img.shields.io/badge/PAL-64K-8b1a1a">
   <img src="https://img.shields.io/badge/6502-assembly-333">
-  <img src="https://img.shields.io/badge/binary-29%2C606%20bytes-333">
-  <img src="https://img.shields.io/badge/acceptance%20sweep-75%2F75-2e7d32">
+  <img src="https://img.shields.io/badge/binary-30%2C126%20bytes-333">
+  <img src="https://img.shields.io/badge/acceptance%20sweep-76%2F76-2e7d32">
 </p>
 
 ---
@@ -236,7 +236,7 @@ contains; `tools/gallery.py` takes the screenshots.
 
 | | |
 |---|---|
-| **Acceptance sweep** | **75 / 75** — every one of them asserting on pixels or game state, not on a variable having changed |
+| **Acceptance sweep** | **76 / 76** — every one of them asserting on pixels or game state, not on a variable having changed |
 | Full playthrough | all four levels, ~22 shots, 0 deaths — path-finding to each **real** exit |
 | Render rate | 11.9 fps empty corridor, 9.3 fps with an enemy in your face |
 | The bestiary, measured | hulk 120→60→0 over exactly two point-blank shots; gunner attacking within 150 frames; hulk 1.23× a husk's height | all sweep checks |
@@ -349,7 +349,7 @@ doesn't.
 
 ```sh
 ./build.sh                     # -> abyss.xex
-python3 tools/verify.py        # 75-point acceptance sweep, in process
+python3 tools/verify.py        # 76-point acceptance sweep, in process
 python3 tools/metrics.py       # what the picture actually contains, measured
 python3 tools/gallery.py       # screenshots, each checked against game state
 ```

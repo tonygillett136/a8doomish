@@ -7,7 +7,7 @@ blank. Four floors lie below you. Each one has a way down, and the way down is
 the only way on.
 
 Nothing here needs explaining twice. There is one weapon, one direction — down
-— and a map that fills itself in as you look around.
+— a compass, and a map that fills itself in as you look around.
 
 ---
 
@@ -43,15 +43,25 @@ Two lines along the bottom. The top line is you, the bottom line is where you
 are.
 
 ```
-HEALTH 100  AMMO 050  ABYSS
-        THE VESTIBULE
+HEALTH 100  AMMO   050  ABYSS SE
+         THE VESTIBULE
 ```
 
 You start every run with **100 health** and **50 shells**.
 
+The two letters on the right are **the compass** — the direction you are
+facing, to eight points. It is worth more than it looks. Every hall in this
+game is a regular grid of pillars, so once you have turned round twice inside
+one there is nothing in the view to tell you which way you came in. The compass
+is the thing that tells you.
+
+It shares its north with the map: **`N` on the status line is up on the map
+screen.** Turn until it reads `N` and you are walking up the map.
+
 That top line is also where the game talks to you. When it has something to
 say — you have cleared the floor, you have died — the message replaces it, and
-the floor name stays put underneath.
+the floor name stays put underneath. The compass steps aside while a message is
+up and comes back when it clears.
 
 There is deliberately no clock and no key display. What you have found and how
 long you have taken are things you are expected to carry in your head.

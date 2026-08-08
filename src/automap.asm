@@ -66,6 +66,34 @@ MROWLO  dta 0,120,240,104,224,88,208,72,192,56,176,40,160,24,144,8
 MROWHI  dta 0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7
         dta 7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14
 
+; Two characters on the status line saying which way you are pointing. It lives
+; in the automap's file and not with the rest of the HUD because it shares the
+; map's frame of reference and must never be allowed to drift from it: sector 0
+; is EAST, because gentables.py builds the ray table with dx=cos and dy=sin, so
+; angle 0 is +X. North is -Y, which is UP the map. So `N` on the status line and
+; up on the map screen mean the same thing, decided once, here.
+;
+; Columns 30-31, not 32-39. The line is 40 columns wide and every string in the
+; game stops at 32 -- that is the part of it a real CRT has actually been seen
+; to show, and the far right of a 40-column line is where overscan eats it.
+COMPASS dta d'E SES SWW NWN NE'
+
+compass_hud
+        lda pang
+        clc
+        adc #16                 ; half a sector, so the points centre on the
+        and #$E0                ; cardinals instead of starting at them
+        lsr @
+        lsr @
+        lsr @
+        lsr @                   ; sector * 2: the table is two chars a point
+        tax
+        lda COMPASS,x
+        sta HUDRAM+40+30
+        lda COMPASS+1,x
+        sta HUDRAM+40+31
+        rts
+
 mapon   dta 0                   ; the map has the screen. Read by the VBI, which
                                 ; owns the band hues and repaints all three of
                                 ; them every frame -- see the top of the flash

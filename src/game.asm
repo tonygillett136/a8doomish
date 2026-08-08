@@ -1093,7 +1093,10 @@ _hu_alive
         lda ammo
         ldx #19
         jsr hud_num
-        rts
+        jmp compass_hud         ; tail call. Only on the ALIVE path: the banners
+                                ; are 32 characters and own columns 30-31 while
+                                ; they are up, and writing the compass over one
+                                ; would put a heading in the middle of a word
 ; A = value 0..255, X = column -> three digits at HUDRAM+40+X
 hud_num
         stx hn2

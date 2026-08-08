@@ -2911,3 +2911,75 @@ PNG. Which was the open question — the aspect-ratio arithmetic said the cells
 would come out square on a 4:3 tube, but the emulator renders 384x240 square
 buffer pixels and cannot show you that, so the shape of the map was the one
 thing no amount of sweeping could confirm.
+
+---
+
+## The compass, and a check that was measuring the wrong thing
+
+Tony: *"BTW, I didn't see the compass?"* He hadn't, because it was never built
+— he picked the map out of the two ideas and the map is what got made. Building
+it now, after the map rather than instead of it, turned out to be the better
+order anyway, because the map settles the question the compass could not answer
+on its own: **which way is north.**
+
+There is now exactly one place in the codebase that decides it. `gentables.py`
+builds the ray table with `dx=cos, dy=sin`, so angle 0 is +X and 64 is +Y; the
+grid is row-major, so +Y is *down* the map. North is therefore -Y, which is up
+the map screen — and `N` on the status line and up on the map now mean the same
+thing by construction. The compass lives in `automap.asm` for that reason and
+not because it is anything to do with drawing a map.
+
+Forty-three bytes: sixteen of table, the rest a `jmp compass_hud` tail call off
+the end of the HUD's alive path. Only the alive path, because the banners are
+32 characters wide and own columns 30-31 while they are up; a heading in the
+middle of `FIRE TO DESCEND` is not an improvement. Columns 30-31 and not 32-39,
+too — the line is 40 wide, every string in the game stops at 32, and 32 columns
+is the part of it a real CRT has actually been seen to display.
+
+### Verifying a convention, not a table
+
+Reading the two characters back and comparing them against a list would only
+prove the table had been copied into the binary correctly. The thing that can
+actually be wrong is the *convention* — whether angle 0 is +X or +Y, whether
+north is up the map or down it — and a compass rotated ninety degrees is worse
+than no compass at all, because you would trust it.
+
+So the check drives each cardinal into `pang`, makes the player **walk**, and
+requires the letter to agree with the direction they went. All four agree:
+`E` moves +X, `S` moves +Y, `W` moves -X, `N` moves -Y.
+
+### The check that had been measuring the autoplayer
+
+Adding the compass failed `the hulk towers over a husk`: ratio 1.19 against a
+threshold of 1.2, where it had read 1.23 the day before. Forty-three bytes of
+HUD code cannot change how tall a hulk is, and did not.
+
+The check spawned its subject three cells east of **wherever the player had
+drifted to by frame 200**, facing whatever they happened to be facing, and did
+that separately for the husk and for the hulk. So the two measurements were not
+being taken from the same place, and the ratio moved whenever anything at all
+shifted the frame timing — which twenty extra cycles in the VBI duly did. The
+number was never a fact about hulks. It was a fact about where the autoplayer
+had got to.
+
+Pinned the viewpoint instead of loosening the threshold: same cell, same
+heading, three cells of clear corridor, the subject's position re-poked every
+frame so it cannot walk closer while being measured. The proof it worked is
+that the *old* binary and the *new* one now return **1.222 and 1.222** — where
+before they returned 1.23 and 1.19.
+
+Loosening the threshold would have made the failure go away and left the check
+measuring the same wrong thing, slightly more tolerantly. This file has a rule
+about that written at the top of `verify.py`, and this is the third time it has
+had to be applied.
+
+### And the screenshots
+
+Every gallery shot showed a status line with no compass on it, which is the same
+failure this log complained about two entries ago — pictures that stopped
+tracking the code. `gallery.py` regenerated eleven of them, each one asserting
+its own condition against RAM. The twelfth, the bestiary hulk, is not one of
+`gallery.py`'s and was recaptured with the same discipline: level asserted,
+slot TYPE asserted, three cells of clear line between.
+
+**76/76.**

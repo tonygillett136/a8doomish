@@ -151,7 +151,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <section id="play">
   <div class="wrap">
     <h2>PLAY</h2>
-    <p class="lead">This is the real game — byte-for-byte the same 30,083-byte executable that runs
+    <p class="lead">This is the real game — byte-for-byte the same 30,126-byte executable that runs
     on the hardware, here running in an Atari 800XL emulator compiled to WebAssembly. PAL, with
     sound: an audio engine that for most of this game's life was verified only as POKEY register
     traces, never actually heard.</p>
@@ -203,6 +203,16 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
         <p class="note">Fire is also the carry-on button — it starts the game, clears every banner and
         restarts you when you die. Whenever the game is waiting, it is waiting for fire, and it says so
         on screen.</p>
+      </div>
+
+      <div class="card"><h3>THE COMPASS</h3>
+        <p>Two letters on the right of the status line, reading to eight points:
+        <code>HEALTH 100&nbsp;&nbsp;AMMO&nbsp;&nbsp;&nbsp;050&nbsp;&nbsp;ABYSS SE</code></p>
+        <p class="note">Worth more than it looks. Every hall down here is a regular grid of pillars, so
+        once you have turned round twice inside one there is nothing in the view to tell you which way
+        you came in — the compass is the thing that tells you. It shares its north with the map:
+        <b><kbd>N</kbd> on the status line is up on the map screen</b>, so turn until it reads N and you
+        are walking up the map. It steps aside while a message is up, and comes back when it clears.</p>
       </div>
 
       <div class="card"><h3>THE MAP — ONLY WHAT YOU LOOKED AT</h3>
@@ -290,7 +300,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
       <div><b>5</b><span>CYCLES A PIXEL &mdash; THE 6502 FLOOR</span></div>
       <div><b>~10.2 fps</b><span>WORLD RENDER</span></div>
       <div><b>50 Hz</b><span>INPUT, WHATEVER THE RENDERER IS DOING</span></div>
-      <div><b>75/75</b><span>CHECKS, ALL ON PIXELS OR STATE</span></div>
+      <div><b>76/76</b><span>CHECKS, ALL ON PIXELS OR STATE</span></div>
       <div><b>1</b><span>NIGHT TO BUILD</span></div>
     </div>
     <div class="cols" style="margin-top:26px">
@@ -351,7 +361,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
 <footer>
   <div class="wrap">
-    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (30,083 bytes)</span>
+    <span>ABYSS &middot; <a href="https://github.com/tonygillett136/a8doomish">github.com/tonygillett136/a8doomish</a> &middot; <a href="emu/abyss.xex" download>abyss.xex</a> (30,126 bytes)</span>
     <span>Built by <a href="https://claude.com/claude-code">Claude Code</a> with Tony Gillett.
     Not affiliated with id Software; DOOM is a trademark of id Software LLC.</span>
   </div>

@@ -516,6 +516,13 @@ class Sweep:
                  sec is True, 'a secret reads as something other than stone'
                  if sec is not True else '')
 
+        points, agree = self.compass()
+        want = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE']
+        self.chk('the compass points where you walk',
+                 points == want and agree,
+                 'the eight points read %s; walking each cardinal %s the letter'
+                 % (' '.join(points), 'agrees with' if agree else 'CONTRADICTS'))
+
         drew, held, freed, stalled, off = self.map_key()
         self.chk('START holds the map up and stops the world',
                  drew and held and freed and stalled,
@@ -758,6 +765,24 @@ class Sweep:
     def hulk_ratio(self):
         import metrics as M
 
+        # (13,6) is open on all four sides and looks east down a clear row;
+        # the subject stands at (16,6), three cells away.
+        EYE, SUBJ, EAST = (13, 6), (16, 6), 0
+
+        def pin(s):
+            """Nail the viewpoint down. This check used to measure from
+            wherever the player had drifted to by frame 200, facing whatever
+            they happened to be facing, with the subject planted three cells
+            east of THAT -- so the husk and the hulk were not being compared
+            from the same place, and the ratio wandered whenever anything
+            shifted the frame timing. Forty-three bytes of compass moved it
+            from 1.23 to 1.19 and failed a threshold of 1.2, having changed
+            nothing whatever about how tall a hulk is. Same cell, same heading,
+            same three cells of corridor, both times."""
+            s.p[PX_HI], s.p[PX_LO] = EYE[0], 0x80
+            s.p[PY_HI], s.p[PY_LO] = EYE[1], 0x80
+            s.p[PANG] = EAST
+
         def rows(ty):
             s = Sweep(self.xex)
             s.a.frame(80)
@@ -765,17 +790,17 @@ class Sweep:
             s.a.frame(200)
             for i in range(6):
                 s.p[AC_LIVE + i] = 0
-            s.go(20)
-            ref = M.luma(M.grab(s.a))
-            m = s.m()
-            for ad, v in ((AC_XHI, m[PX_HI] + 3), (AC_XLO, 0x80),
-                          (AC_YHI, m[PY_HI]), (AC_YLO, 0x80),
-                          (AC_LIVE, 1), (AC_STATE, 1), (AC_HP, 250)):
-                s.p[ad] = v
-            s.p[AC_TYPE] = ty
             for _ in range(20):
-                s.p[AC_HP] = 250
-                s.p[AC_TYPE] = ty
+                pin(s)
+                s.a.frame(1)
+            ref = M.luma(M.grab(s.a))
+            for _ in range(20):
+                pin(s)
+                for ad, v in ((AC_XHI, SUBJ[0]), (AC_XLO, 0x80),
+                              (AC_YHI, SUBJ[1]), (AC_YLO, 0x80),
+                              (AC_LIVE, 1), (AC_STATE, 1), (AC_HP, 250),
+                              (AC_TYPE, ty)):
+                    s.p[ad] = v     # position too: left alone, it walks at you
                 s.a.frame(1)
             now = M.luma(M.grab(s.a))
             return sum(1 for r in range(96)
@@ -956,6 +981,54 @@ class Sweep:
         s.descend()
         fresh = sum(1 for i in range(1024) if s.m()[VIS + i])
         return fresh, seen, 1024 - seen, wrong, secret
+
+    def compass(self):
+        """The heading on the status line, checked against where you WALK.
+
+        Reading the two characters back and comparing them to a table would
+        only prove the table was copied correctly into the binary. The thing
+        that can actually be wrong is the CONVENTION -- whether angle 0 is +X
+        or +Y, and whether north is up the map or down it -- and a compass that
+        is rotated ninety degrees is worse than no compass at all. So each
+        cardinal is driven into `pang`, the player is made to walk, and the
+        letter has to agree with the direction they went.
+        """
+        CH = {0: ' ', 37: 'E', 51: 'S', 55: 'W', 46: 'N'}
+        col = HUDRAM + 40 + 30
+        s = Sweep(self.xex)
+        s.a.frame(80)
+        s.pull_trigger()
+        s.a.frame(60)
+
+        def letter():
+            m = s.m()
+            return (CH.get(m[col], '?') + CH.get(m[col + 1], '?')).strip()
+
+        points = []
+        for ang in range(0, 256, 32):
+            s.p[PANG] = ang
+            s.go_tick()
+            points.append(letter())
+
+        agree = True
+        for ang, want in ((0, 'E'), (64, 'S'), (128, 'W'), (192, 'N')):
+            s.p[PX_HI], s.p[PX_LO] = 13, 0x80    # open on all four sides
+            s.p[PY_HI], s.p[PY_LO] = 6, 0x80
+            s.p[PANG] = ang
+            s.go_tick()
+            got = letter()
+            m = s.m()
+            x0, y0 = m[PX_HI] * 256 + m[PX_LO], m[PY_HI] * 256 + m[PY_LO]
+            for _ in range(4):
+                s.go_tick(joy=1)
+            m = s.m()
+            dx = m[PX_HI] * 256 + m[PX_LO] - x0
+            dy = m[PY_HI] * 256 + m[PY_LO] - y0
+            # east is +X; north is -Y, which is UP the map
+            walked = {'E': dx > 40, 'W': dx < -40,
+                      'S': dy > 40, 'N': dy < -40}[want]
+            agree &= (got == want) and walked
+        return points, agree
 
     def map_key(self):
         """Hold START: the map goes up, the hue goes flat, the world stops.
